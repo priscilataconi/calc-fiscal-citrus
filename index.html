@@ -949,7 +949,9 @@ let _numeroCotacaoAtual  = null;
 let _chaveNumeracaoAtual = null;
 
 function _gerarChaveCotacao(dados) {
-  return [dados.vendedor, dados.cliente, dados.produto, dados.quantidade, dados.valorUSD].join('|');
+  // Não inclui "produto" pois PDF e WhatsApp formatam diferente
+  // mas representam a mesma cotação — vendedor+cliente+qtd+valor é suficiente
+  return [dados.vendedor, dados.cliente, dados.quantidade, dados.valorUSD].join('|');
 }
 
 async function obterNumeroCotacao(dados) {
