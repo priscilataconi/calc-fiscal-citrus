@@ -1473,43 +1473,30 @@ const EMPRESAS_CADASTRO = {
 
 const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbxUH_AwXm-TZM9aX6PbvRuaqeAF94UDKThDuylqxDwoqfmIH33gMHP8D7zyMi3huAPY/exec';
 
-function registrarECobrarNumero(dados) {
-  return new Promise(function (resolve, reject) {
-    const callbackName = 'jsonpCb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
-    window[callbackName] = function (resposta) {
-      try { delete window[callbackName]; } catch (e) {}
-      const script = document.getElementById(callbackName);
-      if (script) script.remove();
-      if (resposta && resposta.sucesso) {
-        resolve(resposta);
-      } else {
-        reject(new Error((resposta && resposta.erro) || 'Resposta inválida do servidor'));
-      }
-    };
-    const params = new URLSearchParams({
-      acao: 'registrar', callback: callbackName,
-      vendedor: dados.vendedor || '', empresa: dados.empresa || '',
-      cliente: dados.cliente || '', cnpjCliente: dados.cnpjCliente || '',
-      produto: dados.produto || '', quantidade: String(dados.quantidade || ''),
-      valorUSD: String(dados.valorUSD || ''), valorBRL: String(dados.valorBRL || '')
-    });
-    const script = document.createElement('script');
-    script.id = callbackName;
-    script.src = SHEETS_API_URL + '?' + params.toString();
-    script.onerror = function () {
-      try { delete window[callbackName]; } catch (e) {}
-      script.remove();
-      reject(new Error('Falha ao conectar ao servidor de cotações'));
-    };
-    setTimeout(function () {
-      if (window[callbackName]) {
-        try { delete window[callbackName]; } catch (e) {}
-        script.remove();
-        reject(new Error('Timeout: servidor não respondeu em 15 segundos'));
-      }
-    }, 15000);
-    document.body.appendChild(script);
+async function registrarECobrarNumero(dados) {
+  const params = new URLSearchParams({
+    acao: 'registrar',
+    vendedor: dados.vendedor || '',
+    empresa: dados.empresa || '',
+    cliente: dados.cliente || '',
+    cnpjCliente: dados.cnpjCliente || '',
+    produto: dados.produto || '',
+    quantidade: String(dados.quantidade || ''),
+    valorUSD: String(dados.valorUSD || ''),
+    valorBRL: String(dados.valorBRL || '')
   });
+
+  const resp = await fetch(SHEETS_API_URL + '?' + params.toString(), {
+    method: 'GET',
+    redirect: 'follow'
+  });
+
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+  const data = await resp.json();
+  if (!data.sucesso) throw new Error(data.erro || 'Erro no servidor');
+
+  return data;
 }
 
 // ============================================================
