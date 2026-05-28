@@ -945,47 +945,37 @@ let unidade = 'kg';
 // para a mesma cotação. O cache é invalidado automaticamente
 // quando o usuário muda cliente, produto, preço ou quantidade.
 
-let _numeroCotacaoAtual  = null;
-let _chaveNumeracaoAtual = null;
-
-function _gerarChaveCotacao(dados) {
-  // Não inclui "produto" pois PDF e WhatsApp formatam diferente
-  // mas representam a mesma cotação — vendedor+cliente+qtd+valor é suficiente
-  return [dados.vendedor, dados.cliente, dados.quantidade, dados.valorUSD].join('|');
-}
+// Número compartilhado entre PDF e WhatsApp para a mesma cotação.
+// Regra simples: se já tem número guardado, usa ele.
+// Só gera novo número quando o usuário muda cliente, produto, preço ou quantidade.
+let _numeroCotacaoAtual = null;
 
 async function obterNumeroCotacao(dados) {
-  const chave = _gerarChaveCotacao(dados);
-
-  // Se já existe número para estes mesmos dados, reutiliza
-  if (_numeroCotacaoAtual && _chaveNumeracaoAtual === chave) {
-    mostrarToast('♻️ Número ' + _numeroCotacaoAtual + ' reutilizado para este documento');
+  // Já tem número guardado? Reutiliza sem chamar a API de novo.
+  if (_numeroCotacaoAtual) {
+    mostrarToast('♻️ Mesmo número reutilizado: ' + _numeroCotacaoAtual);
     return _numeroCotacaoAtual;
   }
 
-  // Tenta registrar na API do Google Sheets
+  // Ainda não tem número — chama a API para gerar um novo.
   mostrarToast('⏳ Registrando cotação...');
   try {
     const resp = await registrarECobrarNumero(dados);
-    _numeroCotacaoAtual  = resp.numero;
-    _chaveNumeracaoAtual = chave;
-    mostrarToast('✅ Cotação ' + _numeroCotacaoAtual + ' registrada com sucesso');
+    _numeroCotacaoAtual = resp.numero;
+    mostrarToast('✅ Cotação ' + _numeroCotacaoAtual + ' registrada!');
     return _numeroCotacaoAtual;
   } catch (err) {
     console.error('Erro ao registrar cotação:', err);
-    // Fallback local — gerado UMA única vez e salvo no cache
     const ano = new Date().getFullYear();
-    const seq = Date.now().toString().slice(-4);
-    _numeroCotacaoAtual  = 'COT-' + ano + '-LOCAL-' + seq;
-    _chaveNumeracaoAtual = chave;
+    _numeroCotacaoAtual = 'COT-' + ano + '-LOCAL-' + Date.now().toString().slice(-4);
     mostrarToast('⚠️ API indisponível · número local: ' + _numeroCotacaoAtual);
     return _numeroCotacaoAtual;
   }
 }
 
+// Limpa o número guardado — chamado quando o usuário muda qualquer dado da cotação
 function invalidarNumeroCotacao() {
-  _numeroCotacaoAtual  = null;
-  _chaveNumeracaoAtual = null;
+  _numeroCotacaoAtual = null;
 }
 
 // ============================================================
@@ -2077,25 +2067,25 @@ function init() {
   document.getElementById('btn-pdf').addEventListener('click', gerarCotacaoPDF);
   document.getElementById('btn-whatsapp').addEventListener('click', compartilharWhatsApp);
 
-  // Botão de diagnóstico da API Sheets
+  // Botão de diagnóstico — só testa se a API responde, SEM gerar número real
   const btnTestar = document.getElementById('btn-testar-api');
   if (btnTestar) {
-    btnTestar.addEventListener('click', function () {
+    btnTestar.addEventListener('click', async function () {
       const statusEl = document.getElementById('api-status');
       statusEl.style.color = '#92400e';
-      statusEl.textContent = '⏳ Testando...';
-      registrarECobrarNumero({
-        vendedor: 'TESTE', empresa: 'TESTE', cliente: 'TESTE',
-        cnpjCliente: '00.000.000/0001-00', produto: 'TESTE',
-        quantidade: '1 kg', valorUSD: '1.00', valorBRL: '5.00'
-      }).then(function (resp) {
-        statusEl.style.color = '#047857';
-        statusEl.textContent = '✅ API funcionando! Número: ' + resp.numero;
-      }).catch(function (err) {
+      statusEl.textContent = '⏳ Testando conexão...';
+      try {
+        const resp = await fetch(SHEETS_API_URL + '?acao=ping', { method: 'GET', redirect: 'follow' });
+        if (resp.ok) {
+          statusEl.style.color = '#047857';
+          statusEl.textContent = '✅ API acessível! Clique em PDF ou WhatsApp para gerar número real.';
+        } else {
+          throw new Error('HTTP ' + resp.status);
+        }
+      } catch (err) {
         statusEl.style.color = '#b91c1c';
         statusEl.textContent = '❌ ' + err.message;
-        console.error('Diagnóstico API Sheets:', err);
-      });
+      }
     });
   }
 
