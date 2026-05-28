@@ -287,7 +287,6 @@
   .alert.info { background: #dbeafe; border-left: 3px solid #3b82f6; color: #1e40af; }
   .alert strong { display: block; margin-bottom: 2px; }
 
-  /* ====== COMPARATIVO REFORMA TRIBUTÁRIA ====== */
   .reforma-section {
     margin-top: 20px;
     border: 2px solid #c4b5fd;
@@ -427,7 +426,6 @@
   @media (max-width: 700px) {
     .reforma-cols { grid-template-columns: 1fr; }
   }
-  /* ====== FIM COMPARATIVO REFORMA ====== */
 
   .actions { display: flex; gap: 8px; margin-top: 14px; }
   .btn {
@@ -484,6 +482,8 @@
       <span id="ptax-status-msg" style="font-size:11px;color:#0369a1;">Clique em "Buscar PTAX" pra cotação automática do dia útil anterior.</span>
       <button id="btn-buscar-ptax" type="button" style="background:#0369a1;color:#fff;border:none;padding:6px 12px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;">🔄 Buscar PTAX</button>
       <a href="https://www.bcb.gov.br/estabilidadefinanceira/historicocotacoes" target="_blank" rel="noopener" style="font-size:10px;color:#0369a1;text-decoration:underline;margin-left:8px;">Conferir no BCB</a>
+      <button id="btn-testar-api" type="button" style="background:#6d28d9;color:#fff;border:none;padding:6px 12px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;margin-left:8px;">🔬 Testar API Sheets</button>
+      <span id="api-status" style="font-size:11px;margin-left:4px;"></span>
     </div>
 
     <div class="scenario-banner">
@@ -574,7 +574,6 @@
           <div style="font-size:11px;color:#475569;margin-top:3px;" id="prod-sel-meta">—</div>
         </div>
 
-        <!-- Selects originais ficam ocultos, mas continuam funcionando no cálculo -->
         <select id="sel-familia" style="display:none">
           <option value="suco-laranja">Suco de Laranja</option>
           <option value="suco-limao">Suco de Limão</option>
@@ -776,7 +775,6 @@
           <div class="breakdown-row" id="row-economia"><span>Economia Tese do Século</span><span class="val pos" id="out-economia">R$ 0,00</span></div>
         </div>
 
-        <!-- ====== COMPARATIVO REFORMA TRIBUTÁRIA ====== -->
         <div class="reforma-section">
           <div class="reforma-header">
             <div>
@@ -793,7 +791,6 @@
           </div>
 
           <div class="reforma-cols">
-            <!-- COLUNA 2026 -->
             <div class="reforma-col atual">
               <div class="reforma-col-header">
                 <span class="ano">2026</span>
@@ -808,7 +805,6 @@
               <div class="reforma-row liq"><span>Líquido</span><span class="val" id="r26-liq">—</span></div>
             </div>
 
-            <!-- COLUNA 2027 -->
             <div class="reforma-col transicao">
               <div class="reforma-col-header">
                 <span class="ano">2027</span>
@@ -823,7 +819,6 @@
               <div class="reforma-row liq"><span>Líquido</span><span class="val" id="r27-liq">—</span></div>
             </div>
 
-            <!-- COLUNA 2033 -->
             <div class="reforma-col pleno">
               <div class="reforma-col-header">
                 <span class="ano">2033</span>
@@ -843,7 +838,6 @@
             <strong>Base legal:</strong> LC 214/2025 · EC 132/2023 · Estimativas de alíquota MF/IFI sujeitas à definição pelo Senado.
           </div>
         </div>
-        <!-- ====== FIM COMPARATIVO ====== -->
 
         <div class="actions">
           <button class="btn btn-primary" id="btn-copiar">📋 Copiar Resumo</button>
@@ -938,11 +932,59 @@ const ESTADO_REGIAO = {
 };
 
 // ============================================================
-// ESTADO
+// ESTADO GLOBAL
 // ============================================================
 
 let modo = 'bruto-liq';
 let unidade = 'kg';
+
+// ============================================================
+// CACHE DE NUMERAÇÃO — COMPARTILHADO ENTRE PDF E WHATSAPP
+// ============================================================
+// Garante que PDF e WhatsApp usem SEMPRE o mesmo número
+// para a mesma cotação. O cache é invalidado automaticamente
+// quando o usuário muda cliente, produto, preço ou quantidade.
+
+let _numeroCotacaoAtual  = null;
+let _chaveNumeracaoAtual = null;
+
+function _gerarChaveCotacao(dados) {
+  return [dados.vendedor, dados.cliente, dados.produto, dados.quantidade, dados.valorUSD].join('|');
+}
+
+async function obterNumeroCotacao(dados) {
+  const chave = _gerarChaveCotacao(dados);
+
+  // Se já existe número para estes mesmos dados, reutiliza
+  if (_numeroCotacaoAtual && _chaveNumeracaoAtual === chave) {
+    mostrarToast('♻️ Número ' + _numeroCotacaoAtual + ' reutilizado para este documento');
+    return _numeroCotacaoAtual;
+  }
+
+  // Tenta registrar na API do Google Sheets
+  mostrarToast('⏳ Registrando cotação...');
+  try {
+    const resp = await registrarECobrarNumero(dados);
+    _numeroCotacaoAtual  = resp.numero;
+    _chaveNumeracaoAtual = chave;
+    mostrarToast('✅ Cotação ' + _numeroCotacaoAtual + ' registrada com sucesso');
+    return _numeroCotacaoAtual;
+  } catch (err) {
+    console.error('Erro ao registrar cotação:', err);
+    // Fallback local — gerado UMA única vez e salvo no cache
+    const ano = new Date().getFullYear();
+    const seq = Date.now().toString().slice(-4);
+    _numeroCotacaoAtual  = 'COT-' + ano + '-LOCAL-' + seq;
+    _chaveNumeracaoAtual = chave;
+    mostrarToast('⚠️ API indisponível · número local: ' + _numeroCotacaoAtual);
+    return _numeroCotacaoAtual;
+  }
+}
+
+function invalidarNumeroCotacao() {
+  _numeroCotacaoAtual  = null;
+  _chaveNumeracaoAtual = null;
+}
 
 // ============================================================
 // HELPERS DE FORMATAÇÃO
@@ -1043,72 +1085,36 @@ function calcular() {
 // COMPARATIVO REFORMA TRIBUTÁRIA (LC 214/2025)
 // ============================================================
 
-/**
- * Identifica se o produto é óleo essencial (cap. 33) ou suco/terpênico
- */
 function isOleoEssencial(familiaKey) {
   return familiaKey.indexOf('oleo') === 0 || familiaKey === 'terpenico';
 }
 
-/**
- * Identifica o tratamento CBS/IBS de um produto baseado no NCM e destino.
- * Retorna 'reduzido60' (sucos ou óleo->fertilizante), 'padrao' (óleo->indústria) ou 'imune' (exportação).
- */
 function identificarTratamentoReforma(familiaKey, operacao, destino) {
   if (operacao === 'export') return 'imune';
-
-  // Sucos NCM 2009.xx → Anexo VII (alimento humano, sem açúcar/conservantes)
   if (familiaKey.indexOf('suco') === 0) return 'reduzido60';
-
-  // Óleos e terpênicos NCM 3301.xx → depende do destino
   if (isOleoEssencial(familiaKey)) {
-    if (destino === 'fertilizante') return 'reduzido60'; // Anexo IX item 7
-    return 'padrao'; // Indústria geral
+    if (destino === 'fertilizante') return 'reduzido60';
+    return 'padrao';
   }
-
   return 'padrao';
 }
 
-/**
- * Calcula o cenário 2026 (atual) para uma operação.
- * Retorna { totalImpostos, liquido, icms, pc, ipi }
- */
 function cenario2026(precoBrutoBRL, p) {
   const icmsVal = precoBrutoBRL * p.icms;
-  const pcVal = (precoBrutoBRL - icmsVal) * p.pc; // Tese do Século
-  const ipiVal = precoBrutoBRL * p.ipi; // IPI fica de fora do líquido (acréscimo)
+  const pcVal = (precoBrutoBRL - icmsVal) * p.pc;
+  const ipiVal = precoBrutoBRL * p.ipi;
   const total = icmsVal + pcVal;
-  return {
-    icms: icmsVal, pc: pcVal, ipi: ipiVal, cbs: 0, ibs: 0,
-    total, liquido: precoBrutoBRL - total
-  };
+  return { icms: icmsVal, pc: pcVal, ipi: ipiVal, cbs: 0, ibs: 0, total, liquido: precoBrutoBRL - total };
 }
 
-/**
- * Calcula o cenário 2027 — transição:
- *  - PIS/COFINS extintos
- *  - ICMS continua normal
- *  - IPI continua (suspenso/normal conforme empresa)
- *  - CBS plena já vale
- *  - IBS em teste (0,1% — desprezível)
- */
 function cenario2027(precoBrutoBRL, p, redutor, cbsAliq) {
   const icmsVal = precoBrutoBRL * p.icms;
   const ipiVal = precoBrutoBRL * p.ipi;
-  // CBS incide sobre o valor da operação (sem exclusão de ICMS — sem Tese do Século)
   const cbsVal = precoBrutoBRL * cbsAliq * redutor;
   const total = icmsVal + cbsVal;
-  return {
-    icms: icmsVal, pc: 0, ipi: ipiVal, cbs: cbsVal, ibs: 0,
-    total, liquido: precoBrutoBRL - total
-  };
+  return { icms: icmsVal, pc: 0, ipi: ipiVal, cbs: cbsVal, ibs: 0, total, liquido: precoBrutoBRL - total };
 }
 
-/**
- * Calcula o cenário 2033 — sistema pleno:
- *  - ICMS, PIS/COFINS, IPI todos extintos
- *  - Só CBS + IBS, ambos com redutor aplicável
- */
 function cenario2033(precoBrutoBRL, p, redutor, cbsAliq, ibsAliq, operacao) {
   if (operacao === 'export') {
     return { icms: 0, pc: 0, ipi: 0, cbs: 0, ibs: 0, total: 0, liquido: precoBrutoBRL };
@@ -1116,10 +1122,7 @@ function cenario2033(precoBrutoBRL, p, redutor, cbsAliq, ibsAliq, operacao) {
   const cbsVal = precoBrutoBRL * cbsAliq * redutor;
   const ibsVal = precoBrutoBRL * ibsAliq * redutor;
   const total = cbsVal + ibsVal;
-  return {
-    icms: 0, pc: 0, ipi: 0, cbs: cbsVal, ibs: ibsVal,
-    total, liquido: precoBrutoBRL - total
-  };
+  return { icms: 0, pc: 0, ipi: 0, cbs: cbsVal, ibs: ibsVal, total, liquido: precoBrutoBRL - total };
 }
 
 function renderReforma() {
@@ -1129,18 +1132,14 @@ function renderReforma() {
   const destino = document.getElementById('sel-destino').value;
   const tratamento = identificarTratamentoReforma(familiaKey, p.operacao, destino);
 
-  // Lê alíquota total CBS+IBS editável
   const totalCBSIBS = (parseFloat(document.getElementById('cbs-ibs-total').value) || 0) / 100;
-  // Proporção: CBS ~33% / IBS ~67% (estimativa atual MF)
-  const cbsAliq = totalCBSIBS * 0.332; // ~8,8% de 26,5%
-  const ibsAliq = totalCBSIBS * 0.668; // ~17,7% de 26,5%
+  const cbsAliq = totalCBSIBS * 0.332;
+  const ibsAliq = totalCBSIBS * 0.668;
 
-  // Redutor: 1 = sem redução; 0.4 = redução de 60%; 0 = imune
   let redutor = 1;
   if (tratamento === 'reduzido60') redutor = 0.4;
   if (tratamento === 'imune') redutor = 0;
 
-  // Badge identificando tratamento
   const badgeArea = document.getElementById('reforma-badge-area');
   if (tratamento === 'imune') {
     badgeArea.innerHTML = '<span class="reforma-badge export">Exportação imune</span>';
@@ -1154,45 +1153,38 @@ function renderReforma() {
     badgeArea.innerHTML = '<span class="reforma-badge padrao">Alíquota padrão (indústria)</span>';
   }
 
-  // Calcula os 3 cenários sobre o preço bruto atual
   const c26 = cenario2026(r.precoBrutoBRL, p);
-  const c27 = cenario2027(r.precoBrutoBRL, p, redutor, p.operacao === 'export' ? 0 : (cbsAliq + ibsAliq * 0.001));
-  // No 2027: CBS plena + IBS apenas 0,1% (teste). Total ≈ cbsAliq * redutor
   const c27real = cenario2027(r.precoBrutoBRL, p, redutor, cbsAliq);
   const c33 = cenario2033(r.precoBrutoBRL, p, redutor, cbsAliq, ibsAliq, p.operacao);
 
-  // ===== Renderização Coluna 2026 =====
   document.getElementById('r26-icms').textContent = p.operacao === 'export' ? 'imune' : fmtBRL(c26.icms);
   document.getElementById('r26-pc').textContent = p.operacao === 'export' ? 'imune' : fmtBRL(c26.pc);
   document.getElementById('r26-ipi').textContent = p.ipi > 0 ? fmtBRL(c26.ipi) : '—';
   document.getElementById('r26-carga').textContent = fmtBRL(c26.total) + ' (' + fmtPct(r.precoBrutoBRL > 0 ? (c26.total / r.precoBrutoBRL) * 100 : 0) + ')';
   document.getElementById('r26-liq').textContent = fmtBRL(c26.liquido);
 
-  // ===== Renderização Coluna 2027 =====
   document.getElementById('r27-icms').textContent = p.operacao === 'export' ? 'imune' : fmtBRL(c27real.icms);
   document.getElementById('r27-ipi').textContent = p.ipi > 0 ? fmtBRL(c27real.ipi) : '—';
   document.getElementById('r27-cbs').textContent = p.operacao === 'export' ? 'imune' : fmtBRL(c27real.cbs);
   document.getElementById('r27-carga').textContent = fmtBRL(c27real.total) + ' (' + fmtPct(r.precoBrutoBRL > 0 ? (c27real.total / r.precoBrutoBRL) * 100 : 0) + ')';
   document.getElementById('r27-liq').textContent = fmtBRL(c27real.liquido);
 
-  // ===== Renderização Coluna 2033 =====
   document.getElementById('r33-cbs').textContent = p.operacao === 'export' ? 'imune' : fmtBRL(c33.cbs);
   document.getElementById('r33-ibs').textContent = p.operacao === 'export' ? 'imune' : fmtBRL(c33.ibs);
   document.getElementById('r33-carga').textContent = fmtBRL(c33.total) + ' (' + fmtPct(r.precoBrutoBRL > 0 ? (c33.total / r.precoBrutoBRL) * 100 : 0) + ')';
   document.getElementById('r33-liq').textContent = fmtBRL(c33.liquido);
 
-  // Footnote contextual
   let nota = '<strong>Base legal:</strong> LC 214/2025 · EC 132/2023 · Estimativas sujeitas à definição pelo Senado.';
   if (tratamento === 'imune') {
     nota += ' <strong>Exportação:</strong> imune com manutenção integral de créditos em todos os cenários.';
   } else if (tratamento === 'reduzido60' && isOleoEssencial(familiaKey)) {
-    nota += ' <strong>Óleo essencial → fertilizante (Anexo IX, item 7):</strong> redução de 60% condicional ao destino comprovado de "fabricação de biofertilizantes/fertilizantes/biodefensivos". A NF deve documentar a destinação. Risco: se cliente desviar para outro uso, benefício pode ser glosado.';
+    nota += ' <strong>Óleo essencial → fertilizante (Anexo IX, item 7):</strong> redução de 60% condicional ao destino comprovado.';
   } else if (tratamento === 'reduzido60') {
-    nota += ' <strong>Sucos (Anexo VII):</strong> redução de 60% condicional a "consumo humano, sem açúcar/conservantes" — confirmar descrição em NF.';
+    nota += ' <strong>Sucos (Anexo VII):</strong> redução de 60% condicional a "consumo humano, sem açúcar/conservantes".';
   } else if (isOleoEssencial(familiaKey)) {
-    nota += ' <strong>Óleo essencial → indústria (perfumaria, alimentos, química):</strong> sem benefício do Anexo IX — alíquota padrão integral.';
+    nota += ' <strong>Óleo essencial → indústria:</strong> alíquota padrão integral.';
   } else {
-    nota += ' <strong>Produto sem benefício específico</strong> nos anexos da LC 214/2025 — alíquota padrão integral.';
+    nota += ' <strong>Produto sem benefício específico</strong> nos anexos da LC 214/2025.';
   }
   document.getElementById('reforma-footnote').innerHTML = nota;
 }
@@ -1206,21 +1198,15 @@ function render() {
   const p = r.p;
   const familiaKey = document.getElementById('sel-familia').value;
 
-  // Estado de destino: mostra/esconde
   document.getElementById('grp-estado').style.display = p.operacao === 'interno-out' ? 'block' : 'none';
-
-  // Destino do produto: só faz sentido para óleo essencial em operação interna
-  // (sucos têm regra própria via NCM; exportação é imune independente do destino)
   const mostrarDestino = isOleoEssencial(familiaKey) && p.operacao !== 'export';
   document.getElementById('grp-destino').style.display = mostrarDestino ? 'block' : 'none';
 
-  // Parâmetros
   document.getElementById('p-empresa').textContent = `${p.empresa.nome.split(' ')[0]} (CFOP ${p.empresa.cfopVenda})`;
   document.getElementById('p-icms').textContent = p.icmsLabel;
   document.getElementById('p-pc').textContent = p.pcLabel;
   document.getElementById('p-ipi').textContent = p.ipiLabel;
 
-  // Alertas
   let alerts = '';
   if (p.operacao === 'export') {
     alerts += '<div class="alert info"><strong>✈️ Operação de Exportação</strong>Imune a ICMS, PIS/COFINS e IPI.</div>';
@@ -1236,7 +1222,6 @@ function render() {
   }
   document.getElementById('alerts-area').innerHTML = alerts;
 
-  // Mostra/esconde linhas
   document.getElementById('row-ipi').style.display = p.ipi > 0 ? 'flex' : 'none';
   document.getElementById('row-icms').style.display = p.icms > 0 ? 'flex' : 'none';
   document.getElementById('row-pc').style.display = p.pc > 0 ? 'flex' : 'none';
@@ -1245,13 +1230,11 @@ function render() {
   document.getElementById('row-pcTot').style.display = p.pc > 0 ? 'flex' : 'none';
   document.getElementById('row-economia').style.display = (p.pc > 0 && p.icms > 0) ? 'flex' : 'none';
 
-  // Resultado principal
   const precoPrincipalUSD = modo === 'bruto-liq' ? r.precoLiquidoUSD : r.precoBrutoUSD;
   const precoPrincipalBRL = modo === 'bruto-liq' ? r.precoLiquidoBRL : r.precoBrutoBRL;
   document.getElementById('out-principalUSD').textContent = fmtUSD(precoPrincipalUSD);
   document.getElementById('out-principalBRL').textContent = fmtBRL(precoPrincipalBRL);
 
-  // Composição
   document.getElementById('out-precoUSD').textContent = fmtUSD(r.precoBrutoUSD);
   document.getElementById('out-precoBRL').textContent = fmtBRL(r.precoBrutoBRL);
   document.getElementById('out-ipi').textContent = '+' + fmtBRL(r.ipiVal);
@@ -1259,7 +1242,6 @@ function render() {
   document.getElementById('out-pc').textContent = '−' + fmtBRL(r.pcVal);
   document.getElementById('out-liq').textContent = fmtBRL(r.precoLiquidoBRL);
 
-  // Totais
   document.getElementById('out-receitaTot').textContent = fmtBRL(r.precoBrutoBRL * r.qtd);
   document.getElementById('out-ipiTot').textContent = fmtBRL(r.ipiVal * r.qtd);
   document.getElementById('out-nfTot').textContent = fmtBRL(r.valorNF * r.qtd);
@@ -1268,39 +1250,28 @@ function render() {
   document.getElementById('out-netbackTot').textContent = fmtBRL(r.precoLiquidoBRL * r.qtd);
   document.getElementById('out-netbackTotUSD').textContent = fmtUSD2(r.cotacao > 0 ? (r.precoLiquidoBRL * r.qtd) / r.cotacao : 0);
 
-  // Indicadores
   document.getElementById('out-cargaTrib').textContent = fmtPct(r.cargaTrib);
   document.getElementById('out-fator').textContent = fmtFator(r.fator);
   document.getElementById('out-economia').textContent = fmtBRL(r.economiaTotal);
 
-  // Comparativo reforma tributária
   renderReforma();
 }
 
 // ============================================================
-// BASE DE PRODUTOS — Citrus Juice & Sucos Kiki
+// BASE DE PRODUTOS
 // ============================================================
-// 116 produtos com mapeamento Código → Família → NCM
-// Atualizar lista: editar PRODUTOS abaixo e dar commit no GitHub.
 
 const PRODUTOS = [
-  // ===== ÓLEOS ESSENCIAIS DE LARANJA =====
   { codigo: 'CJ61', descricao: 'TERPENO DE LARANJA', familia: 'oleo-laranja', ncm: '3301.12.90', unidade: 'T' },
   { codigo: 'CJ07', descricao: 'OLEO ESSENCIAL DE LARANJA', familia: 'oleo-laranja', ncm: '3301.12.90', unidade: 'T' },
   { codigo: 'CJ244', descricao: 'FASE OLEOSA DE LARANJA CONCENTRADA 10X', familia: 'oleo-laranja', ncm: '3301.12.90', unidade: 'T' },
   { codigo: 'CJ88', descricao: 'ÓLEO CONCENTRADO DE LARANJA 5 FOLD', familia: 'oleo-laranja', ncm: '3301.12.90', unidade: 'T' },
-
-  // ===== ÓLEOS ESSENCIAIS DE LIMÃO =====
   { codigo: 'CJ128', descricao: 'OLEO ESSENCIAL DE LIMAO TAHITI', familia: 'oleo-limao', ncm: '3301.13.00', unidade: 'T' },
   { codigo: 'CJ92', descricao: 'TERPENO DE LIMAO SICILIANO', familia: 'oleo-limao', ncm: '3301.12.90', unidade: 'T' },
   { codigo: 'CJ-08', descricao: 'OLEO ESSENCIAL DE LIMA ACIDA TAHITI', familia: 'oleo-limao', ncm: '3301.19.10', unidade: 'T' },
   { codigo: 'CJ09', descricao: 'OLEO ESSENCIAL DE LIMAO SICILIANO', familia: 'oleo-limao', ncm: '3301.13.00', unidade: 'T' },
   { codigo: 'CJ08', descricao: 'OLEO ESSENCIAL DE LIMAO TAHITI', familia: 'oleo-limao', ncm: '3301.13.00', unidade: 'T' },
-
-  // ===== D-LIMONENO (HIDROCARBONETO) =====
   { codigo: 'CJ04', descricao: "D'LIMONENO DE LARANJA", familia: 'limoneno', ncm: '2902.19.10', unidade: 'T' },
-
-  // ===== SUCO DE LARANJA =====
   { codigo: 'CJ01', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.19.00', unidade: 'T' },
   { codigo: 'CJ122', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
   { codigo: 'CJ151', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
@@ -1326,8 +1297,6 @@ const PRODUTOS = [
   { codigo: 'SK162', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
   { codigo: 'SK193', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
   { codigo: 'CJ248', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-
-  // ===== SUCO DE LIMÃO (TAHITI/SICILIANO) =====
   { codigo: 'CJ91', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
   { codigo: 'CJ03', descricao: 'Suco Concentrado de Siciliano', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
   { codigo: 'CJ104', descricao: 'Suco Concentrado de Limão Siciliano Clarificado', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
@@ -1406,8 +1375,6 @@ const PRODUTOS = [
   { codigo: 'CJ117', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
   { codigo: 'CJ116', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
   { codigo: 'CJ205', descricao: 'SUCO DE LIMAO TAHITI NAO CONCENTRADO ASSEPTICO REFRIGERADO (NFC)', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-
-  // ===== SUCOS MISTOS / CONCENTRADO P/ REFRESCO =====
   { codigo: 'CJ249', descricao: 'CONCENTRADO LIQUIDO PARA REFRESCO DE LIMAO SICILIANO', familia: 'suco-misto', ncm: '2009.90.00', unidade: 'T' },
   { codigo: 'CJ251', descricao: 'Suco de Limão Tahiti Integral (NFC)', familia: 'suco-misto', ncm: '2009.90.00', unidade: 'T' },
   { codigo: 'CJ58', descricao: 'SUCO MISTO DE LARANJA E LIMAO CONCENTRADO PRESERVADO', familia: 'suco-misto', ncm: '2009.90.00', unidade: 'T' }
@@ -1416,22 +1383,10 @@ const PRODUTOS = [
 // ============================================================
 // CADASTRO DE VENDEDORES
 // ============================================================
-// Para adicionar/remover vendedor: edite o array abaixo e
-// substitua o arquivo no GitHub. Em ~2 min o site atualiza.
 
 const VENDEDORES = [
-  {
-    id: 'lucas',
-    nome: 'Lucas Albert',
-    telefone: '(19) 98114-0444',
-    empresas: 'todas' // 'todas' ou array ['citrus', 'kiki', ...]
-  },
-  {
-    id: 'taize',
-    nome: 'Taize',
-    telefone: '(19) 98181-4495',
-    empresas: 'todas'
-  }
+  { id: 'lucas', nome: 'Lucas Albert', telefone: '(19) 98114-0444', empresas: 'todas' },
+  { id: 'taize', nome: 'Taize', telefone: '(19) 98181-4495', empresas: 'todas' }
 ];
 
 function obterVendedorSelecionado() {
@@ -1444,14 +1399,8 @@ function popularVendedores() {
   const sel = document.getElementById('sel-vendedor');
   const empresaKey = document.getElementById('sel-empresa').value;
   if (!sel) return;
-
-  // Guarda valor atualmente selecionado (se houver)
   const atual = sel.value;
-
-  // Limpa exceto a primeira opção (placeholder)
   sel.innerHTML = '<option value="">— Selecione o vendedor —</option>';
-
-  // Filtra vendedores conforme empresa selecionada
   VENDEDORES.forEach(function (v) {
     const atende = v.empresas === 'todas' || (Array.isArray(v.empresas) && v.empresas.indexOf(empresaKey) >= 0);
     if (!atende) return;
@@ -1460,8 +1409,6 @@ function popularVendedores() {
     opt.textContent = v.nome + ' — ' + v.telefone;
     sel.appendChild(opt);
   });
-
-  // Restaura seleção anterior ou aplica do localStorage
   try {
     const salvo = localStorage.getItem('vendedor-padrao');
     if (atual && sel.querySelector('option[value="' + atual + '"]')) {
@@ -1469,103 +1416,66 @@ function popularVendedores() {
     } else if (salvo && sel.querySelector('option[value="' + salvo + '"]')) {
       sel.value = salvo;
     }
-  } catch (e) {
-    // localStorage indisponível — segue sem memória
-  }
+  } catch (e) {}
 }
 
 function salvarVendedorPadrao() {
   const sel = document.getElementById('sel-vendedor');
   if (!sel) return;
-  try {
-    if (sel.value) {
-      localStorage.setItem('vendedor-padrao', sel.value);
-    }
-  } catch (e) {
-    // ignora se localStorage indisponível
-  }
+  try { if (sel.value) localStorage.setItem('vendedor-padrao', sel.value); } catch (e) {}
 }
+
 // ============================================================
-// IMPORTANTE: substituir os placeholders pelos dados reais.
-// O caminho da logo é relativo — quando subir no GitHub Pages,
-// coloque os PNGs na pasta /logos/ do repositório.
+// DADOS CADASTRAIS DAS EMPRESAS
+// ============================================================
 
 const EMPRESAS_CADASTRO = {
   'citrus': {
-    nomeFantasia: 'Citrus Juice',
-    razaoSocial: 'CITRUS JUICE LTDA',
-    cnpj: '11.186.770/0001-97',
-    ie: '367.014.520.117',
+    nomeFantasia: 'Citrus Juice', razaoSocial: 'CITRUS JUICE LTDA',
+    cnpj: '11.186.770/0001-97', ie: '367.014.520.117',
     endereco: 'Rodovia Cezário José de Castilho, Km 474,5, S/N — Zona Rural',
     cidade: 'Itajobi/SP — CEP 15.840-000',
-    telefone: '(17) 99634-XXXX [preencher]',
-    email: 'comercial@citrusjuice.com.br [confirmar]',
-    site: 'www.citrusjuice.com.br [confirmar]',
-    logo: './logos/citrus-juice.png',
-    corPrimaria: '#7CB342',
-    corSecundaria: '#1B5E20'
+    telefone: '(17) 99634-XXXX [preencher]', email: 'comercial@citrusjuice.com.br',
+    site: 'www.citrusjuice.com.br', logo: './logos/citrus-juice.png',
+    corPrimaria: '#7CB342', corSecundaria: '#1B5E20'
   },
   'kiki': {
-    nomeFantasia: 'Sucos Kiki',
-    razaoSocial: 'SUCOS KIKI LTDA',
-    cnpj: '60.823.747/0001-71',
-    ie: '[Sintegra SP — preencher]',
+    nomeFantasia: 'Sucos Kiki', razaoSocial: 'SUCOS KIKI LTDA',
+    cnpj: '60.823.747/0001-71', ie: '[Sintegra SP — preencher]',
     endereco: 'Rodovia Prof. Zeferino Vaz (SP-332), S/N, Km 165, Cx Postal 43 — Distrito Industrial',
     cidade: 'Engenheiro Coelho/SP — CEP 13.449-899',
-    telefone: '(19) 3857-XXXX [preencher]',
-    email: 'comercial@sucoskiki.com.br [confirmar]',
-    site: 'www.sucoskiki.com.br [confirmar]',
-    logo: './logos/sucos-kiki.png',
-    corPrimaria: '#C62828',
-    corSecundaria: '#1B5E20'
+    telefone: '(19) 3857-XXXX [preencher]', email: 'comercial@sucoskiki.com.br',
+    site: 'www.sucoskiki.com.br', logo: './logos/sucos-kiki.png',
+    corPrimaria: '#C62828', corSecundaria: '#1B5E20'
   },
   'commodities': {
-    nomeFantasia: 'Citrus Commodities',
-    razaoSocial: 'CITRUS COMMODITIES S.A.',
-    cnpj: '27.182.892/0001-45',
-    ie: '[Sintegra SP — preencher]',
+    nomeFantasia: 'Citrus Commodities', razaoSocial: 'CITRUS COMMODITIES S.A.',
+    cnpj: '27.182.892/0001-45', ie: '[Sintegra SP — preencher]',
     endereco: 'Avenida Paulista, 1765, Andar 13, Conj 131, Sala 1317 — Bela Vista',
     cidade: 'São Paulo/SP — CEP 01.311-930',
-    telefone: '[preencher]',
-    email: 'comercial@citruscommodities.com.br [confirmar]',
-    site: 'www.citruscommodities.com.br [confirmar]',
-    logo: './logos/citrus-commodities.png',
-    corPrimaria: '#1a1a1a',
-    corSecundaria: '#666666'
+    telefone: '[preencher]', email: 'comercial@citruscommodities.com.br',
+    site: 'www.citruscommodities.com.br', logo: './logos/citrus-commodities.png',
+    corPrimaria: '#1a1a1a', corSecundaria: '#666666'
   },
   'camporico': {
-    nomeFantasia: 'Campo Rico',
-    razaoSocial: 'AGROINDUSTRIAL CAMPO RICO LTDA',
-    cnpj: '[CNPJ — Pri vai enviar]',
-    ie: '[Sintegra SP — preencher]',
-    endereco: '[Endereço — preencher]',
-    cidade: '[Cidade/UF — CEP]',
-    telefone: '[preencher]',
-    email: 'comercial@camporico.com.br [confirmar]',
-    site: 'www.camporico.com.br [confirmar]',
-    logo: './logos/campo-rico.png',
-    corPrimaria: '#1B4332',
-    corSecundaria: '#C9A84C'
+    nomeFantasia: 'Campo Rico', razaoSocial: 'AGROINDUSTRIAL CAMPO RICO LTDA',
+    cnpj: '[CNPJ — preencher]', ie: '[Sintegra SP — preencher]',
+    endereco: '[Endereço — preencher]', cidade: '[Cidade/UF — CEP]',
+    telefone: '[preencher]', email: 'comercial@camporico.com.br',
+    site: 'www.camporico.com.br', logo: './logos/campo-rico.png',
+    corPrimaria: '#1B4332', corSecundaria: '#C9A84C'
   }
 };
 
 // ============================================================
-// NUMERAÇÃO CENTRALIZADA + REGISTRO NO GOOGLE SHEETS (JSONP)
+// API GOOGLE SHEETS (JSONP)
 // ============================================================
-// URL do Apps Script Web App que registra a cotação no Google Sheets
-// e devolve o próximo número único via JSONP (contorna CORS).
+
 const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbxUH_AwXm-TZM9aX6PbvRuaqeAF94UDKThDuylqxDwoqfmIH33gMHP8D7zyMi3huAPY/exec';
 
-/**
- * Chama o Apps Script via JSONP e retorna o número único + sucesso/erro.
- * Funciona em qualquer dispositivo (PC, celular, tablet) porque a
- * numeração é GLOBAL — vive no Google Sheets.
- */
 function registrarECobrarNumero(dados) {
   return new Promise(function (resolve, reject) {
     const callbackName = 'jsonpCb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
-
-    // Define callback global temporário
     window[callbackName] = function (resposta) {
       try { delete window[callbackName]; } catch (e) {}
       const script = document.getElementById(callbackName);
@@ -1576,22 +1486,13 @@ function registrarECobrarNumero(dados) {
         reject(new Error((resposta && resposta.erro) || 'Resposta inválida do servidor'));
       }
     };
-
-    // Monta query string com todos os dados
     const params = new URLSearchParams({
-      acao: 'registrar',
-      callback: callbackName,
-      vendedor: dados.vendedor || '',
-      empresa: dados.empresa || '',
-      cliente: dados.cliente || '',
-      cnpjCliente: dados.cnpjCliente || '',
-      produto: dados.produto || '',
-      quantidade: String(dados.quantidade || ''),
-      valorUSD: String(dados.valorUSD || ''),
-      valorBRL: String(dados.valorBRL || '')
+      acao: 'registrar', callback: callbackName,
+      vendedor: dados.vendedor || '', empresa: dados.empresa || '',
+      cliente: dados.cliente || '', cnpjCliente: dados.cnpjCliente || '',
+      produto: dados.produto || '', quantidade: String(dados.quantidade || ''),
+      valorUSD: String(dados.valorUSD || ''), valorBRL: String(dados.valorBRL || '')
     });
-
-    // Cria tag <script> apontando para o Apps Script (JSONP)
     const script = document.createElement('script');
     script.id = callbackName;
     script.src = SHEETS_API_URL + '?' + params.toString();
@@ -1600,16 +1501,13 @@ function registrarECobrarNumero(dados) {
       script.remove();
       reject(new Error('Falha ao conectar ao servidor de cotações'));
     };
-
-    // Timeout de segurança (15s)
     setTimeout(function () {
       if (window[callbackName]) {
         try { delete window[callbackName]; } catch (e) {}
         script.remove();
-        reject(new Error('Timeout: servidor de cotações não respondeu'));
+        reject(new Error('Timeout: servidor não respondeu em 15 segundos'));
       }
     }, 15000);
-
     document.body.appendChild(script);
   });
 }
@@ -1631,18 +1529,12 @@ async function gerarCotacaoPDF() {
   const operacaoTexto = operacaoSel.options[operacaoSel.selectedIndex].text;
   const estado = document.getElementById('sel-estado').value;
 
-  // Validação: vendedor obrigatório
-  if (!vendedor) {
-    mostrarToast('⚠️ Selecione um vendedor antes de gerar o PDF');
-    return;
-  }
+  if (!vendedor) { mostrarToast('⚠️ Selecione um vendedor antes de gerar o PDF'); return; }
 
-  // Dados do cliente e cotação
   const cliRazao = (document.getElementById('cli-razao').value || '').trim() || '[NOME DO CLIENTE]';
   const cliCnpj = (document.getElementById('cli-cnpj').value || '').trim() || '—';
   const cliContato = (document.getElementById('cli-contato').value || '').trim() || '—';
   const cliEmail = (document.getElementById('cli-email').value || '').trim() || '—';
-  const cliTelefone = (document.getElementById('cli-telefone').value || '').trim() || '—';
   const incoterm = document.getElementById('cot-incoterm').value;
   const pagto = document.getElementById('cot-pagto').value;
   const prazo = (document.getElementById('cot-prazo').value || '').trim() || 'A combinar';
@@ -1651,52 +1543,31 @@ async function gerarCotacaoPDF() {
   const dataEmissao = new Date().toLocaleDateString('pt-BR');
   const validadeFmt = validade ? new Date(validade + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
 
-  // Preço principal (depende do modo)
-  const precoUnitUSD = modo === 'bruto-liq' ? r.precoBrutoUSD : r.precoBrutoUSD;
-  const precoUnitBRL = modo === 'bruto-liq' ? r.precoBrutoBRL : r.precoBrutoBRL;
+  const precoUnitUSD = r.precoBrutoUSD;
+  const precoUnitBRL = r.precoBrutoBRL;
   const qtd = r.qtd;
   const totalUSD = precoUnitUSD * qtd;
   const totalBRL = precoUnitBRL * qtd;
 
-  // ============================================================
-  // 1) Registra no Google Sheets e pega número único global
-  // ============================================================
-  mostrarToast('⏳ Registrando cotação...');
+  // ── Obter número único (compartilhado com WhatsApp) ──
+  const produtoTxt = produtoSelecionadoAtual
+    ? produtoSelecionadoAtual.codigo + ' — ' + produtoSelecionadoAtual.descricao
+    : p.familia.label + ' (' + ncm + ')';
 
-  let numeroCot;
-  try {
-    const produtoTxt = produtoSelecionadoAtual
-      ? produtoSelecionadoAtual.codigo + ' — ' + produtoSelecionadoAtual.descricao
-      : p.familia.label + ' (' + ncm + ')';
-    const resp = await registrarECobrarNumero({
-      vendedor: vendedor.nome,
-      empresa: cadastro.razaoSocial,
-      cliente: cliRazao,
-      cnpjCliente: cliCnpj,
-      produto: produtoTxt,
-      quantidade: qtd + ' ' + unidade,
-      valorUSD: totalUSD.toFixed(2),
-      valorBRL: totalBRL.toFixed(2)
-    });
-    numeroCot = resp.numero;
-    mostrarToast('✅ Cotação ' + numeroCot + ' registrada · gerando PDF...');
-  } catch (err) {
-    console.error('Erro ao registrar cotação:', err);
-    mostrarToast('⚠️ ' + err.message + ' · gerando PDF sem registro');
-    // Fallback: número local
-    const ano = new Date().getFullYear();
-    numeroCot = 'COT-' + ano + '-LOCAL-' + Date.now().toString().slice(-4);
-  }
+  const numeroCot = await obterNumeroCotacao({
+    vendedor:    vendedor.nome,
+    empresa:     cadastro.razaoSocial,
+    cliente:     cliRazao,
+    cnpjCliente: cliCnpj,
+    produto:     produtoTxt,
+    quantidade:  qtd + ' ' + unidade,
+    valorUSD:    totalUSD.toFixed(2),
+    valorBRL:    totalBRL.toFixed(2)
+  });
 
-  // ============================================================
-  // 2) Monta HTML da cotação e gera o PDF
-  // ============================================================
-
-  // Monta HTML da cotação (numa div invisível) e renderiza em PDF via html2canvas
+  // ── Monta HTML da cotação ──
   const cotacaoHTML = `
     <div id="cotacao-render" style="width:794px;background:#fff;font-family:'Helvetica',Arial,sans-serif;color:#1a2332;padding:0;">
-
-      <!-- CABEÇALHO -->
       <div style="background:linear-gradient(135deg,${cadastro.corPrimaria} 0%,${cadastro.corSecundaria} 100%);color:#fff;padding:24px 36px;display:flex;justify-content:space-between;align-items:center;">
         <div style="display:flex;align-items:center;gap:16px;">
           <img src="${cadastro.logo}" alt="${cadastro.nomeFantasia}" style="height:60px;width:auto;background:#fff;padding:6px;border-radius:6px;" onerror="this.style.display='none'">
@@ -1715,27 +1586,22 @@ async function gerarCotacaoPDF() {
         </div>
       </div>
 
-      <!-- DADOS DO CLIENTE -->
       <div style="padding:20px 36px;background:#f8fafc;border-bottom:1px solid #e2e8f0;">
         <div style="font-size:10px;font-weight:700;color:${cadastro.corPrimaria};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Destinatário</div>
         <div style="font-size:15px;font-weight:600;color:#1a2332;margin-bottom:4px;">${cliRazao}</div>
-        <div style="font-size:12px;color:#475569;">
-          CNPJ: ${cliCnpj} &nbsp;·&nbsp; A/C: ${cliContato} &nbsp;·&nbsp; ${cliEmail}
-        </div>
+        <div style="font-size:12px;color:#475569;">CNPJ: ${cliCnpj} &nbsp;·&nbsp; A/C: ${cliContato} &nbsp;·&nbsp; ${cliEmail}</div>
       </div>
 
-      <!-- PRODUTO / DETALHAMENTO -->
       <div style="padding:24px 36px;">
         <div style="font-size:10px;font-weight:700;color:${cadastro.corPrimaria};text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Produto Cotado</div>
-
         <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
           <thead>
             <tr style="background:${cadastro.corPrimaria};color:#fff;">
-              <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">Descrição</th>
-              <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">NCM</th>
-              <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">Quantidade</th>
-              <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">Unit. USD</th>
-              <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">Total USD</th>
+              <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;">Descrição</th>
+              <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:600;text-transform:uppercase;">NCM</th>
+              <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:600;text-transform:uppercase;">Quantidade</th>
+              <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:600;text-transform:uppercase;">Unit. USD</th>
+              <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:600;text-transform:uppercase;">Total USD</th>
             </tr>
           </thead>
           <tbody>
@@ -1745,14 +1611,13 @@ async function gerarCotacaoPDF() {
                 <span style="font-size:11px;color:#64748b;">${ncmDescricao.split('— ')[1] || ''}</span>
               </td>
               <td style="padding:14px 12px;text-align:center;font-size:12px;font-family:monospace;color:#475569;">${ncm}</td>
-              <td style="padding:14px 12px;text-align:right;font-size:13px;font-variant-numeric:tabular-nums;">${qtd.toLocaleString('pt-BR')} ${unidade}</td>
-              <td style="padding:14px 12px;text-align:right;font-size:13px;font-variant-numeric:tabular-nums;font-weight:600;">${fmtUSD(precoUnitUSD)}</td>
-              <td style="padding:14px 12px;text-align:right;font-size:13px;font-variant-numeric:tabular-nums;font-weight:700;color:${cadastro.corPrimaria};">${fmtUSD2(totalUSD)}</td>
+              <td style="padding:14px 12px;text-align:right;font-size:13px;">${qtd.toLocaleString('pt-BR')} ${unidade}</td>
+              <td style="padding:14px 12px;text-align:right;font-size:13px;font-weight:600;">${fmtUSD(precoUnitUSD)}</td>
+              <td style="padding:14px 12px;text-align:right;font-size:13px;font-weight:700;color:${cadastro.corPrimaria};">${fmtUSD2(totalUSD)}</td>
             </tr>
           </tbody>
         </table>
 
-        <!-- VALOR TOTAL DESTACADO -->
         <div style="background:linear-gradient(135deg,${cadastro.corPrimaria} 0%,${cadastro.corSecundaria} 100%);color:#fff;padding:20px 24px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
           <div>
             <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:0.9;">Valor Total da Proposta</div>
@@ -1764,86 +1629,49 @@ async function gerarCotacaoPDF() {
           </div>
         </div>
 
-        <!-- CONDIÇÕES COMERCIAIS -->
         <div style="font-size:10px;font-weight:700;color:${cadastro.corPrimaria};text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Condições Comerciais</div>
-
         <table style="width:100%;border-collapse:collapse;background:#f8fafc;border-radius:6px;overflow:hidden;margin-bottom:20px;">
-          <tr>
-            <td style="padding:10px 14px;width:30%;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.3px;background:#f1f5f9;">Incoterm</td>
-            <td style="padding:10px 14px;font-size:13px;color:#1a2332;">${incoterm}</td>
-          </tr>
-          <tr style="border-top:1px solid #e2e8f0;">
-            <td style="padding:10px 14px;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.3px;background:#f1f5f9;">Condição de Pagamento</td>
-            <td style="padding:10px 14px;font-size:13px;color:#1a2332;">${pagto}</td>
-          </tr>
-          <tr style="border-top:1px solid #e2e8f0;">
-            <td style="padding:10px 14px;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.3px;background:#f1f5f9;">Prazo de Entrega</td>
-            <td style="padding:10px 14px;font-size:13px;color:#1a2332;">${prazo}</td>
-          </tr>
-          <tr style="border-top:1px solid #e2e8f0;">
-            <td style="padding:10px 14px;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.3px;background:#f1f5f9;">Validade da Cotação</td>
-            <td style="padding:10px 14px;font-size:13px;color:#1a2332;font-weight:600;">${validadeFmt}</td>
-          </tr>
-          <tr style="border-top:1px solid #e2e8f0;">
-            <td style="padding:10px 14px;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.3px;background:#f1f5f9;">Tributação</td>
-            <td style="padding:10px 14px;font-size:12px;color:#1a2332;">
-              ${p.operacao === 'export' ? 'Operação de exportação — imune (ICMS, PIS/COFINS, IPI)' : `${operacaoTexto}${p.operacao === 'interno-out' ? ' (destino: ' + estado + ')' : ''}`}<br>
-              <span style="font-size:11px;color:#64748b;">${p.icmsLabel !== 'Imune (exportação)' ? 'ICMS: ' + p.icmsLabel + ' · PIS+COFINS: ' + p.pcLabel : 'Conforme regimes constitucionais'}</span>
-            </td>
-          </tr>
+          <tr><td style="padding:10px 14px;width:30%;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;background:#f1f5f9;">Incoterm</td><td style="padding:10px 14px;font-size:13px;">${incoterm}</td></tr>
+          <tr style="border-top:1px solid #e2e8f0;"><td style="padding:10px 14px;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;background:#f1f5f9;">Condição de Pagamento</td><td style="padding:10px 14px;font-size:13px;">${pagto}</td></tr>
+          <tr style="border-top:1px solid #e2e8f0;"><td style="padding:10px 14px;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;background:#f1f5f9;">Prazo de Entrega</td><td style="padding:10px 14px;font-size:13px;">${prazo}</td></tr>
+          <tr style="border-top:1px solid #e2e8f0;"><td style="padding:10px 14px;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;background:#f1f5f9;">Validade da Cotação</td><td style="padding:10px 14px;font-size:13px;font-weight:600;">${validadeFmt}</td></tr>
+          <tr style="border-top:1px solid #e2e8f0;"><td style="padding:10px 14px;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;background:#f1f5f9;">Tributação</td><td style="padding:10px 14px;font-size:12px;">${p.operacao === 'export' ? 'Operação de exportação — imune (ICMS, PIS/COFINS, IPI)' : operacaoTexto + (p.operacao === 'interno-out' ? ' (' + estado + ')' : '')}<br><span style="font-size:11px;color:#64748b;">${p.icmsLabel !== 'Imune (exportação)' ? 'ICMS: ' + p.icmsLabel + ' · PIS+COFINS: ' + p.pcLabel : 'Conforme regimes constitucionais'}</span></td></tr>
         </table>
 
-        ${obs ? `
-        <div style="font-size:10px;font-weight:700;color:${cadastro.corPrimaria};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Observações</div>
-        <div style="background:#fef9e7;border-left:3px solid #D4A04A;padding:12px 14px;border-radius:4px;font-size:12px;color:#6B5418;line-height:1.5;margin-bottom:20px;">
-          ${obs.replace(/\n/g, '<br>')}
-        </div>` : ''}
+        ${obs ? `<div style="font-size:10px;font-weight:700;color:${cadastro.corPrimaria};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Observações</div><div style="background:#fef9e7;border-left:3px solid #D4A04A;padding:12px 14px;border-radius:4px;font-size:12px;color:#6B5418;line-height:1.5;margin-bottom:20px;">${obs.replace(/\n/g,'<br>')}</div>` : ''}
 
-        <!-- ASSINATURA / FOOTER -->
         <div style="margin-top:30px;padding-top:20px;border-top:2px solid ${cadastro.corPrimaria};display:flex;justify-content:space-between;align-items:flex-end;">
           <div>
             <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Atenciosamente,</div>
-            <div style="font-size:14px;font-weight:700;color:#1a2332;margin-top:8px;">${vendedor ? vendedor.nome : '[Vendedor — selecionar]'}</div>
+            <div style="font-size:14px;font-weight:700;color:#1a2332;margin-top:8px;">${vendedor.nome}</div>
             <div style="font-size:11px;color:#64748b;">Departamento Comercial · ${cadastro.razaoSocial}</div>
-            <div style="font-size:11px;color:#64748b;margin-top:4px;">📱 ${vendedor ? vendedor.telefone : cadastro.telefone}</div>
+            <div style="font-size:11px;color:#64748b;margin-top:4px;">📱 ${vendedor.telefone}</div>
           </div>
-          <div style="text-align:right;font-size:9px;color:#94a3b8;">
-            Cotação emitida em ${dataEmissao}<br>
-            ${numeroCot} · ${cadastro.nomeFantasia}
-          </div>
+          <div style="text-align:right;font-size:9px;color:#94a3b8;">Cotação emitida em ${dataEmissao}<br>${numeroCot} · ${cadastro.nomeFantasia}</div>
         </div>
       </div>
     </div>
   `;
 
-  // Cria div temporária invisível para renderizar
   const container = document.createElement('div');
   container.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;';
   container.innerHTML = cotacaoHTML;
   document.body.appendChild(container);
-
   const alvo = container.querySelector('#cotacao-render');
 
-  mostrarToast('⏳ Gerando cotação PDF...');
+  mostrarToast('⏳ Gerando PDF...');
 
-  // Aguarda imagens carregarem (logo)
   const imgs = alvo.querySelectorAll('img');
   const promessasImg = Array.from(imgs).map(function (img) {
     if (img.complete) return Promise.resolve();
     return new Promise(function (resolve) {
-      img.onload = resolve;
-      img.onerror = resolve;
-      setTimeout(resolve, 1500); // timeout de segurança
+      img.onload = resolve; img.onerror = resolve;
+      setTimeout(resolve, 1500);
     });
   });
 
   Promise.all(promessasImg).then(function () {
-    return html2canvas(alvo, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false
-    });
+    return html2canvas(alvo, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
   }).then(function (canvas) {
     const imgData = canvas.toDataURL('image/jpeg', 0.95);
     const jsPDF = window.jspdf.jsPDF;
@@ -1856,23 +1684,19 @@ async function gerarCotacaoPDF() {
     if (imgH <= pageH) {
       pdf.addImage(imgData, 'JPEG', 0, 0, imgW, imgH);
     } else {
-      // Quebra em múltiplas páginas se necessário
-      let restante = imgH;
-      let posY = 0;
+      let restante = imgH, posY = 0;
       while (restante > 0) {
         pdf.addImage(imgData, 'JPEG', 0, posY, imgW, imgH);
-        restante -= pageH;
-        posY -= pageH;
+        restante -= pageH; posY -= pageH;
         if (restante > 0) pdf.addPage();
       }
     }
 
     const empresaCod = cadastro.nomeFantasia.replace(/\s+/g, '_');
-    const filename = `${numeroCot}_${empresaCod}_${cliRazao.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30)}.pdf`;
-    pdf.save(filename);
-
+    const cliRazaoFmt = (document.getElementById('cli-razao').value || 'cliente').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30);
+    pdf.save(`${numeroCot}_${empresaCod}_${cliRazaoFmt}.pdf`);
     document.body.removeChild(container);
-    mostrarToast('✅ PDF gerado e baixado!');
+    mostrarToast('✅ PDF gerado: ' + numeroCot);
   }).catch(function (err) {
     console.error('Erro ao gerar PDF:', err);
     document.body.removeChild(container);
@@ -1891,10 +1715,7 @@ async function compartilharWhatsApp() {
   const cadastro = EMPRESAS_CADASTRO[empresaKey];
   const vendedor = obterVendedorSelecionado();
 
-  if (!vendedor) {
-    mostrarToast('⚠️ Selecione um vendedor antes de compartilhar');
-    return;
-  }
+  if (!vendedor) { mostrarToast('⚠️ Selecione um vendedor antes de compartilhar'); return; }
 
   const cliRazao = (document.getElementById('cli-razao').value || '').trim() || '[Cliente]';
   const cliContato = (document.getElementById('cli-contato').value || '').trim() || '';
@@ -1907,30 +1728,20 @@ async function compartilharWhatsApp() {
   const validade = document.getElementById('cot-validade').value;
   const validadeFmt = validade ? new Date(validade + 'T12:00:00').toLocaleDateString('pt-BR') : 'A combinar';
   const qtd = r.qtd;
-  const totalUSD = (modo === 'bruto-liq' ? r.precoBrutoUSD : r.precoBrutoUSD) * qtd;
-  const totalBRL = (modo === 'bruto-liq' ? r.precoBrutoBRL : r.precoBrutoBRL) * qtd;
+  const totalUSD = r.precoBrutoUSD * qtd;
+  const totalBRL = r.precoBrutoBRL * qtd;
 
-  // Registra no Sheets para obter número único
-  mostrarToast('⏳ Registrando cotação...');
-  let numeroCot;
-  try {
-    const resp = await registrarECobrarNumero({
-      vendedor: vendedor.nome,
-      empresa: cadastro.razaoSocial,
-      cliente: cliRazao,
-      cnpjCliente: cliCnpj,
-      produto: p.familia.label + ' (' + ncm + ')',
-      quantidade: qtd + ' ' + unidade,
-      valorUSD: totalUSD.toFixed(2),
-      valorBRL: totalBRL.toFixed(2)
-    });
-    numeroCot = resp.numero;
-  } catch (err) {
-    console.error('Erro ao registrar cotação:', err);
-    mostrarToast('⚠️ Falha ao registrar: usando número local');
-    const ano = new Date().getFullYear();
-    numeroCot = 'COT-' + ano + '-LOCAL-' + Date.now().toString().slice(-4);
-  }
+  // ── Obter número único (compartilhado com PDF) ──
+  const numeroCot = await obterNumeroCotacao({
+    vendedor:    vendedor.nome,
+    empresa:     cadastro.razaoSocial,
+    cliente:     cliRazao,
+    cnpjCliente: cliCnpj,
+    produto:     p.familia.label + ' (' + ncm + ')',
+    quantidade:  qtd + ' ' + unidade,
+    valorUSD:    totalUSD.toFixed(2),
+    valorBRL:    totalBRL.toFixed(2)
+  });
 
   const telLimpo = cliTelefone.replace(/\D/g, '');
   const saudacao = cliContato ? `Olá, ${cliContato}!` : `Olá!`;
@@ -1942,7 +1753,7 @@ Segue nossa proposta comercial *${numeroCot}* da *${cadastro.razaoSocial}*:
 📦 *Produto:* ${p.familia.label}
 🏷️ *NCM:* ${ncm}
 📊 *Quantidade:* ${qtd.toLocaleString('pt-BR')} ${unidade}
-💰 *Valor unitário:* ${fmtUSD(modo === 'bruto-liq' ? r.precoBrutoUSD : r.precoBrutoUSD)}/${unidade}
+💰 *Valor unitário:* ${fmtUSD(r.precoBrutoUSD)}/${unidade}
 💵 *Total:* ${fmtUSD2(totalUSD)}
 
 📋 *Condições:*
@@ -1962,47 +1773,31 @@ ${cadastro.razaoSocial}`;
 
   const msgUrl = encodeURIComponent(msg);
   let whatsappUrl;
-
   if (telLimpo && telLimpo.length >= 10) {
     const telComDDI = telLimpo.startsWith('55') ? telLimpo : '55' + telLimpo;
     whatsappUrl = `https://wa.me/${telComDDI}?text=${msgUrl}`;
   } else {
     whatsappUrl = `https://wa.me/?text=${msgUrl}`;
   }
-
   window.open(whatsappUrl, '_blank');
-  mostrarToast('📱 WhatsApp aberto com ' + numeroCot);
+  mostrarToast('📱 WhatsApp aberto · ' + numeroCot);
 }
 
 // ============================================================
-// BUSCA AUTOMÁTICA DE PTAX (USD → BRL)
+// BUSCA AUTOMÁTICA DE PTAX
 // ============================================================
-// Fontes em cascata:
-//   1. AwesomeAPI — brasileira, CORS habilitado, espelha BCB
-//   2. BCB Olinda — fonte oficial do Banco Central (backup)
-//
-// Para fins fiscais (NF-e, IRPJ), usa-se PTAX de venda do
-// último dia útil anterior — Lei 9.430/96 art. 33.
 
 function formatarDataBR(dataStr) {
-  // Recebe "YYYY-MM-DD" ou Date e devolve "DD/MM/YYYY"
   if (typeof dataStr === 'string' && dataStr.length >= 10) {
     const partes = dataStr.substring(0, 10).split('-');
     if (partes.length === 3) return partes[2] + '/' + partes[1] + '/' + partes[0];
   }
   if (dataStr instanceof Date) {
-    const dd = String(dataStr.getDate()).padStart(2, '0');
-    const mm = String(dataStr.getMonth() + 1).padStart(2, '0');
-    const yyyy = dataStr.getFullYear();
-    return dd + '/' + mm + '/' + yyyy;
+    return String(dataStr.getDate()).padStart(2,'0') + '/' + String(dataStr.getMonth()+1).padStart(2,'0') + '/' + dataStr.getFullYear();
   }
   return String(dataStr);
 }
 
-/**
- * Busca PTAX usando AwesomeAPI (primária).
- * Retorna { valor, dataFormatada, fonte } ou null se falhar.
- */
 async function buscarPtaxAwesome() {
   try {
     const resp = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
@@ -2010,86 +1805,37 @@ async function buscarPtaxAwesome() {
     const dados = await resp.json();
     const cot = dados.USDBRL;
     if (!cot) throw new Error('Sem dados USD-BRL');
-
-    const valor = parseFloat(cot.ask); // ask = venda (PTAX venda)
+    const valor = parseFloat(cot.ask);
     if (isNaN(valor) || valor <= 0) throw new Error('Valor inválido');
-
-    // create_date vem "YYYY-MM-DD HH:MM:SS"
-    const dataParte = (cot.create_date || '').substring(0, 10);
-
-    return {
-      valor: valor,
-      dataFormatada: formatarDataBR(dataParte),
-      fonte: 'AwesomeAPI (espelho BCB)'
-    };
-  } catch (err) {
-    console.warn('Falha AwesomeAPI:', err.message);
-    return null;
-  }
+    return { valor, dataFormatada: formatarDataBR((cot.create_date || '').substring(0, 10)), fonte: 'AwesomeAPI (espelho BCB)' };
+  } catch (err) { console.warn('Falha AwesomeAPI:', err.message); return null; }
 }
 
-/**
- * Busca PTAX direto no BCB Olinda (backup).
- * Tenta últimos 10 dias para cobrir fins de semana/feriados.
- */
 async function buscarPtaxBCB() {
   try {
     const hoje = new Date();
-    const dias = new Date();
-    dias.setDate(hoje.getDate() - 10);
-
-    const fmt = function (d) {
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
-      const yyyy = d.getFullYear();
-      return mm + '-' + dd + '-' + yyyy;
-    };
-
+    const dias = new Date(); dias.setDate(hoje.getDate() - 10);
+    const fmt = function (d) { return String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'-'+d.getFullYear(); };
     const url = "https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarPeriodo(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@dataInicial='" + fmt(dias) + "'&@dataFinalCotacao='" + fmt(hoje) + "'&$format=json";
-
     const resp = await fetch(url);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const dados = await resp.json();
-
     if (!dados.value || dados.value.length === 0) throw new Error('Sem cotações');
-
-    // Filtra fechamentos e pega o mais recente
     const fechamentos = dados.value.filter(function (c) { return c.tipoBoletim === 'Fechamento'; });
-    const ultima = fechamentos.length > 0 ? fechamentos[fechamentos.length - 1] : dados.value[dados.value.length - 1];
-
-    return {
-      valor: ultima.cotacaoVenda,
-      dataFormatada: formatarDataBR(ultima.dataHoraCotacao),
-      fonte: 'BCB Olinda (oficial)'
-    };
-  } catch (err) {
-    console.warn('Falha BCB:', err.message);
-    return null;
-  }
+    const ultima = fechamentos.length > 0 ? fechamentos[fechamentos.length-1] : dados.value[dados.value.length-1];
+    return { valor: ultima.cotacaoVenda, dataFormatada: formatarDataBR(ultima.dataHoraCotacao), fonte: 'BCB Olinda (oficial)' };
+  } catch (err) { console.warn('Falha BCB:', err.message); return null; }
 }
 
-/**
- * Tenta buscar PTAX usando ambas as fontes em cascata.
- */
 async function buscarPtax() {
   const btn = document.getElementById('btn-buscar-ptax');
   const msg = document.getElementById('ptax-status-msg');
   const inputCotacao = document.getElementById('cotacao');
-
-  btn.disabled = true;
-  btn.textContent = '⏳ Buscando...';
-  msg.style.color = '#92400e';
-  msg.textContent = 'Consultando PTAX...';
-
+  btn.disabled = true; btn.textContent = '⏳ Buscando...';
+  msg.style.color = '#92400e'; msg.textContent = 'Consultando PTAX...';
   let resultado = await buscarPtaxAwesome();
-  if (!resultado) {
-    msg.textContent = 'AwesomeAPI falhou — tentando BCB...';
-    resultado = await buscarPtaxBCB();
-  }
-
-  btn.disabled = false;
-  btn.textContent = '🔄 Atualizar PTAX';
-
+  if (!resultado) { msg.textContent = 'AwesomeAPI falhou — tentando BCB...'; resultado = await buscarPtaxBCB(); }
+  btn.disabled = false; btn.textContent = '🔄 Atualizar PTAX';
   if (resultado) {
     inputCotacao.value = resultado.valor.toFixed(4);
     msg.style.color = '#047857';
@@ -2102,44 +1848,30 @@ async function buscarPtax() {
 }
 
 // ============================================================
-// HANDLERS DE UI
-// ============================================================
-
-// ============================================================
 // BUSCA INTELIGENTE DE PRODUTOS
 // ============================================================
 
 let produtoSelecionadoAtual = null;
 
 function normalizar(texto) {
-  return (texto || '').toString()
-    .toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return (texto || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 }
 
 function buscarProdutos(termo) {
   const t = normalizar(termo);
   if (t.length < 2) return [];
-
   const termos = t.split(' ').filter(function (x) { return x.length > 0; });
-
   const resultados = PRODUTOS.map(function (p) {
     const buscavel = normalizar(p.codigo + ' ' + p.descricao + ' ' + p.ncm);
     let score = 0;
-
     if (normalizar(p.codigo) === t) score += 1000;
     if (normalizar(p.codigo).startsWith(t)) score += 500;
-
     termos.forEach(function (termo) {
       if (buscavel.indexOf(termo) >= 0) score += 100;
       if (normalizar(p.descricao).startsWith(termo)) score += 50;
     });
-
-    return { produto: p, score: score };
+    return { produto: p, score };
   }).filter(function (r) { return r.score > 0; });
-
   resultados.sort(function (a, b) { return b.score - a.score; });
   return resultados.slice(0, 10).map(function (r) { return r.produto; });
 }
@@ -2147,41 +1879,32 @@ function buscarProdutos(termo) {
 function renderizarResultadosBusca(produtos) {
   const div = document.getElementById('busca-resultados');
   if (produtos.length === 0) {
-    div.innerHTML = '<div style="padding:14px;color:#94a3b8;font-size:12px;text-align:center;font-style:italic;">Nenhum produto encontrado. Tente outro termo.</div>';
-    div.style.display = 'block';
-    return;
+    div.innerHTML = '<div style="padding:14px;color:#94a3b8;font-size:12px;text-align:center;font-style:italic;">Nenhum produto encontrado.</div>';
+    div.style.display = 'block'; return;
   }
-
   div.innerHTML = produtos.map(function (p) {
     const familia = FAMILIAS[p.familia];
     const familiaLabel = familia ? familia.label : p.familia;
     return '<div class="resultado-busca" data-codigo="' + p.codigo + '" style="padding:9px 12px;border-bottom:1px solid #e2e8f0;cursor:pointer;transition:background 0.1s;">' +
       '<div style="font-size:12px;font-weight:600;color:#1a2332;">' + p.codigo + ' — ' + p.descricao + '</div>' +
-      '<div style="font-size:10.5px;color:#64748b;margin-top:2px;">' +
-        '<span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:3px;font-weight:600;">' + familiaLabel + '</span>' +
-        ' · NCM ' + p.ncm + ' · ' + p.unidade +
-      '</div>' +
+      '<div style="font-size:10.5px;color:#64748b;margin-top:2px;"><span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:3px;font-weight:600;">' + familiaLabel + '</span> · NCM ' + p.ncm + ' · ' + p.unidade + '</div>' +
     '</div>';
   }).join('');
-
   div.querySelectorAll('.resultado-busca').forEach(function (el) {
     el.addEventListener('mouseenter', function () { el.style.background = '#f0f9ff'; });
     el.addEventListener('mouseleave', function () { el.style.background = '#fff'; });
     el.addEventListener('click', function () {
-      const codigo = el.dataset.codigo;
-      const produto = PRODUTOS.find(function (p) { return p.codigo === codigo; });
+      const produto = PRODUTOS.find(function (p) { return p.codigo === el.dataset.codigo; });
       if (produto) aplicarProdutoSelecionado(produto);
     });
   });
-
   div.style.display = 'block';
 }
 
 function aplicarProdutoSelecionado(produto) {
   produtoSelecionadoAtual = produto;
-
+  invalidarNumeroCotacao(); // novo produto = nova cotação
   document.getElementById('sel-familia').value = produto.familia;
-
   atualizarNCMs();
   const selNCM = document.getElementById('sel-ncm');
   if (!Array.from(selNCM.options).some(function (o) { return o.value === produto.ncm; })) {
@@ -2191,25 +1914,15 @@ function aplicarProdutoSelecionado(produto) {
     selNCM.appendChild(opt);
   }
   selNCM.value = produto.ncm;
-
   const selUnidade = document.getElementById('sel-unidade');
-  if (produto.unidade === 'T') {
-    selUnidade.value = 'ton';
-  } else {
-    selUnidade.value = 'kg';
-  }
+  selUnidade.value = produto.unidade === 'T' ? 'ton' : 'kg';
   aplicarUnidade();
-
   const familia = FAMILIAS[produto.familia];
-  const familiaLabel = familia ? familia.label : produto.familia;
   document.getElementById('prod-sel-desc').textContent = produto.codigo + ' — ' + produto.descricao;
-  document.getElementById('prod-sel-meta').innerHTML =
-    '<strong>' + familiaLabel + '</strong> · NCM ' + produto.ncm + ' · Unidade: ' + produto.unidade;
+  document.getElementById('prod-sel-meta').innerHTML = '<strong>' + (familia ? familia.label : produto.familia) + '</strong> · NCM ' + produto.ncm + ' · Unidade: ' + produto.unidade;
   document.getElementById('produto-selecionado').style.display = 'block';
-
   document.getElementById('busca-produto').value = produto.codigo + ' — ' + produto.descricao;
   document.getElementById('busca-resultados').style.display = 'none';
-
   render();
 }
 
@@ -2258,37 +1971,25 @@ function aplicarUnidade() {
 function copiarResumo() {
   const r = calcular();
   const p = r.p;
-  const empresa = p.empresa.nome;
   const ncm = document.getElementById('sel-ncm').value;
   const operacaoSel = document.getElementById('sel-operacao');
   const operacao = operacaoSel.options[operacaoSel.selectedIndex].text;
   const estado = document.getElementById('sel-estado').value;
-
   const texto = '📊 CALCULADORA FISCAL MULTI-CNPJ — Citrus Juice\n' +
     'Modo: ' + (modo === 'bruto-liq' ? 'BRUTO → LÍQUIDO' : 'LÍQUIDO → BRUTO (GROSS-UP)') + '\n\n' +
-    'EMPRESA: ' + empresa + '\n' +
+    'EMPRESA: ' + p.empresa.nome + '\n' +
     'PRODUTO: ' + p.familia.label + ' — NCM ' + ncm + '\n' +
     'OPERAÇÃO: ' + operacao + (p.operacao === 'interno-out' ? ' (' + estado + ')' : '') + '\n\n' +
-    'ICMS: ' + p.icmsLabel + '\n' +
-    'PIS+COFINS: ' + p.pcLabel + '\n' +
-    'IPI: ' + p.ipiLabel + '\n\n' +
+    'ICMS: ' + p.icmsLabel + '\n' + 'PIS+COFINS: ' + p.pcLabel + '\n' + 'IPI: ' + p.ipiLabel + '\n\n' +
     'RESULTADO: ' + fmtUSD(modo === 'bruto-liq' ? r.precoLiquidoUSD : r.precoBrutoUSD) + '/' + unidade + '\n' +
     '          ' + fmtBRL(modo === 'bruto-liq' ? r.precoLiquidoBRL : r.precoBrutoBRL) + '/' + unidade + '\n\n' +
-    'Carga tributária: ' + fmtPct(r.cargaTrib) + '\n' +
-    'Fator gross-up: ' + fmtFator(r.fator) + '\n\n' +
+    'Carga tributária: ' + fmtPct(r.cargaTrib) + '\nFator gross-up: ' + fmtFator(r.fator) + '\n\n' +
     'Elaborado por Priscila — Citrus Juice LTDA';
-
   if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(texto).then(function () {
-      mostrarToast('✅ Resumo copiado!');
-    });
+    navigator.clipboard.writeText(texto).then(function () { mostrarToast('✅ Resumo copiado!'); });
   } else {
     const ta = document.createElement('textarea');
-    ta.value = texto;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
+    ta.value = texto; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
     mostrarToast('✅ Resumo copiado!');
   }
 }
@@ -2296,91 +1997,36 @@ function copiarResumo() {
 function mostrarToast(msg) {
   const toast = document.createElement('div');
   toast.textContent = msg;
-  toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1B2E5E;color:#fff;padding:14px 24px;border-radius:8px;z-index:10000;font-weight:600;';
+  toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1B2E5E;color:#fff;padding:14px 24px;border-radius:8px;z-index:10000;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.2);';
   document.body.appendChild(toast);
-  setTimeout(function () { toast.remove(); }, 2500);
+  setTimeout(function () { toast.remove(); }, 3000);
 }
 
 function abrirModalAnexo9() {
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;';
   overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
-
   const modal = document.createElement('div');
   modal.style.cssText = 'background:#fff;border-radius:12px;max-width:760px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
-
   modal.innerHTML =
     '<div style="background:linear-gradient(135deg,#6d28d9 0%,#7c3aed 100%);color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">' +
-      '<div>' +
-        '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;opacity:0.85;font-weight:600;">LC 214/2025</div>' +
-        '<div style="font-size:17px;font-weight:700;margin-top:2px;">Anexo IX — Item 7</div>' +
-        '<div style="font-size:11px;opacity:0.85;margin-top:2px;">Insumos com redução de 60% das alíquotas de IBS e CBS</div>' +
-      '</div>' +
+      '<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;opacity:0.85;font-weight:600;">LC 214/2025</div>' +
+      '<div style="font-size:17px;font-weight:700;margin-top:2px;">Anexo IX — Item 7</div>' +
+      '<div style="font-size:11px;opacity:0.85;margin-top:2px;">Insumos com redução de 60% das alíquotas de IBS e CBS</div></div>' +
       '<button id="fechar-modal-anexo9" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;line-height:1;">×</button>' +
     '</div>' +
-
     '<div style="padding:22px 24px;overflow-y:auto;font-size:13px;line-height:1.6;color:#1f2937;">' +
-
       '<div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:12px 14px;border-radius:4px;margin-bottom:18px;font-size:12px;color:#78350f;">' +
-        '<strong>📌 Resumo prático:</strong> O óleo essencial (NCM 33.01) está incluído no Anexo IX item 7, ' +
-        'mas a redução de 60% é <strong>condicional ao destino comprovado</strong> — só vale quando vendido para fabricação de ' +
-        'fertilizantes/biodefensivos. Para outras indústrias (perfumaria, alimentos, química), aplica-se alíquota padrão integral.' +
+        '<strong>📌 Resumo prático:</strong> Óleo essencial (NCM 33.01) incluído no Anexo IX item 7, mas a redução de 60% é <strong>condicional ao destino comprovado</strong> — só vale para fabricação de fertilizantes/biodefensivos.' +
       '</div>' +
-
-      '<h4 style="color:#5b21b6;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;border-bottom:2px solid #c4b5fd;padding-bottom:4px;">📄 Texto integral do Item 7</h4>' +
-      '<p style="margin-bottom:14px;text-align:justify;font-size:12.5px;">' +
-        'Calcário, casca de coco triturada, turfa; tortas, bagaços e demais resíduos e desperdícios vegetais das indústrias alimentares; ' +
-        'cascas, serragens e demais resíduos e desperdícios de madeira; resíduos da indústria de celulose (dregs e grits), ossos, borra de carnaúba, ' +
-        'cinzas, resíduos agroindustriais orgânicos, DL-Metionina e seus análogos, vermiculita e argilas expandidas, palhas e cascas de produtos vegetais, ' +
-        'fibra de coco e outras fibras vegetais, silicatos de potássio ou de magnésio, resinas e oleorresinas naturais, sucos e extratos vegetais, ' +
-        'aminoácidos e microrganismos mortos, <strong style="background:#fbbf24;padding:1px 4px;border-radius:3px;">óleos essenciais</strong>, ' +
-        'argilas e terras, carvão vegetal e pastas mecânicas de madeira; ' +
-        '<strong style="color:#6d28d9;">todos destinados diretamente à fabricação de biofertilizantes, fertilizantes, corretivos de solo ' +
-        '(inclusive condicionadores), remineralizadores, substratos para plantas, bioestimulantes ou biodefensivos para controle fitossanitário ' +
-        'ou utilizados diretamente como biofertilizantes, fertilizantes, corretivos de solo (inclusive condicionadores), remineralizadores, ' +
-        'substratos para plantas, bioestimulantes ou biodefensivos para controle fitossanitário; em conformidade com as definições e demais ' +
-        'requisitos da legislação específica.</strong>' +
-      '</p>' +
-
-      '<h4 style="color:#5b21b6;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;margin:18px 0 8px;border-bottom:2px solid #c4b5fd;padding-bottom:4px;">🏷️ NCMs cobertos pelo Item 7</h4>' +
-      '<div style="background:#f5f3ff;padding:12px;border-radius:6px;font-size:11.5px;font-family:monospace;line-height:1.8;color:#4c1d95;">' +
-        '05.06 · 1201.10.00 · 1213.00.00 · 1301.90.90 · 1302.19.9 · 1401.90.00 · 1404.90.90 · 2102.20.00 · 23.02 · 23.03 · 2304.00 · 2305.00.00 · ' +
-        '23.06 · 2308.00.00 · 2703.00.00 · 2839.90.10 · 2839.90.50 · 2922.4 · 2930.40 · ' +
-        '<span style="background:#fbbf24;padding:2px 6px;border-radius:4px;font-weight:700;">33.01</span> · ' +
-        '3802.90.40 · 3804.00 · 3824.99.71 · 4401.39.00 · 4401.4 · 4402.90.00 · 4701.00.00 · 5305.00.90 · 6806.20.00' +
-      '</div>' +
-
-      '<h4 style="color:#5b21b6;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;margin:18px 0 8px;border-bottom:2px solid #c4b5fd;padding-bottom:4px;">⚖️ Art. 138, §1º — Condição adicional</h4>' +
-      '<p style="background:#f0f9ff;padding:12px 14px;border-left:4px solid #3b82f6;border-radius:4px;font-size:12px;color:#1e40af;font-style:italic;margin-bottom:14px;">' +
-        '"A redução de alíquotas prevista no caput deste artigo somente se aplica aos produtos de que trata o Anexo IX ' +
-        'desta Lei Complementar que, quando exigido, estejam registrados como insumos agropecuários ou aquícolas no órgão ' +
-        'competente do Ministério da Agricultura e Pecuária."' +
-      '</p>' +
-
-      '<h4 style="color:#5b21b6;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;margin:18px 0 8px;border-bottom:2px solid #c4b5fd;padding-bottom:4px;">✅ Condições para Citrus Juice aplicar o 60%</h4>' +
-      '<ol style="padding-left:20px;font-size:12.5px;line-height:1.7;">' +
-        '<li style="margin-bottom:6px;"><strong>Destinação comprovada:</strong> cliente deve ser fabricante de biofertilizante / fertilizante / corretivo / bioestimulante / biodefensivo</li>' +
-        '<li style="margin-bottom:6px;"><strong>Documentação fiscal:</strong> CFOP, CST e descrição do produto na NF devem refletir a destinação</li>' +
-        '<li style="margin-bottom:6px;"><strong>Conformidade MAPA:</strong> quando exigido, o insumo deve estar registrado como agropecuário no Ministério da Agricultura</li>' +
-        '<li style="margin-bottom:6px;"><strong>Declaração do destinatário:</strong> recomendado obter declaração ou cláusula contratual confirmando o uso pretendido</li>' +
-        '<li style="margin-bottom:6px;"><strong>Segregação contábil:</strong> separar volumes por destinação (fertilizante vs. industrial geral)</li>' +
-      '</ol>' +
-
+      '<p style="margin-bottom:14px;text-align:justify;font-size:12.5px;">O item 7 do Anexo IX inclui <strong style="background:#fbbf24;padding:1px 4px;border-radius:3px;">óleos essenciais</strong> destinados à fabricação de biofertilizantes, fertilizantes, corretivos de solo, remineralizadores, substratos para plantas, bioestimulantes ou biodefensivos para controle fitossanitário, em conformidade com a legislação específica.</p>' +
       '<div style="background:#fee2e2;border-left:4px solid #dc2626;padding:12px 14px;border-radius:4px;margin-top:18px;font-size:12px;color:#7f1d1d;">' +
-        '<strong>⚠️ Risco:</strong> se o cliente desviar o óleo para uso fora do escopo do Item 7 (ex: usar para perfume em vez de fertilizante), ' +
-        'o benefício pode ser glosado pelo fisco com cobrança retroativa de tributos, multa e juros. ' +
-        'Recomenda-se cláusula contratual de responsabilização e auditoria periódica do destino.' +
+        '<strong>⚠️ Risco:</strong> se o cliente desviar o óleo para uso fora do escopo do Item 7, o benefício pode ser glosado pelo fisco com cobrança retroativa de tributos, multa e juros.' +
       '</div>' +
-
-      '<div style="margin-top:18px;padding-top:14px;border-top:1px solid #e5e7eb;font-size:10.5px;color:#6b7280;text-align:center;">' +
-        '<strong>Fonte:</strong> LC 214/2025 · Art. 138 + Anexo IX (Item 7) · Texto oficial Planalto/Senado Federal' +
-      '</div>' +
-
+      '<div style="margin-top:18px;padding-top:14px;border-top:1px solid #e5e7eb;font-size:10.5px;color:#6b7280;text-align:center;"><strong>Fonte:</strong> LC 214/2025 · Art. 138 + Anexo IX (Item 7)</div>' +
     '</div>';
-
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
-
   modal.querySelector('#fechar-modal-anexo9').addEventListener('click', function () { overlay.remove(); });
 }
 
@@ -2389,13 +2035,12 @@ function abrirModalAnexo9() {
 // ============================================================
 
 function init() {
-  // Liga todos os listeners
   document.querySelectorAll('[data-modo]').forEach(function (btn) {
     btn.addEventListener('click', function () { aplicarModo(btn.dataset.modo); });
   });
+
   document.getElementById('sel-empresa').addEventListener('change', function () {
-    popularVendedores();
-    render();
+    popularVendedores(); invalidarNumeroCotacao(); render();
   });
   document.getElementById('sel-operacao').addEventListener('change', render);
   document.getElementById('sel-estado').addEventListener('change', render);
@@ -2404,39 +2049,35 @@ function init() {
   document.getElementById('sel-ncm').addEventListener('change', render);
   document.getElementById('sel-vendedor').addEventListener('change', salvarVendedorPadrao);
 
-  // Busca inteligente de produtos
+  // Invalida o número de cotação quando dados que identificam a operação mudam
+  ['cli-razao', 'cli-cnpj', 'precoUSD', 'quantidade'].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('change', invalidarNumeroCotacao);
+      el.addEventListener('input', invalidarNumeroCotacao);
+    }
+  });
+
+  // Busca de produto
   const inputBusca = document.getElementById('busca-produto');
   const divResultados = document.getElementById('busca-resultados');
 
-  // Botão de buscar PTAX
-  document.getElementById('btn-buscar-ptax').addEventListener('click', buscarPtax);
-
-  // Tenta buscar PTAX automaticamente ao carregar
-  buscarPtax();
-
   inputBusca.addEventListener('input', function () {
+    invalidarNumeroCotacao();
     const termo = inputBusca.value;
-    if (termo.length < 2) {
-      divResultados.style.display = 'none';
-      return;
-    }
-    const produtos = buscarProdutos(termo);
-    renderizarResultadosBusca(produtos);
+    if (termo.length < 2) { divResultados.style.display = 'none'; return; }
+    renderizarResultadosBusca(buscarProdutos(termo));
   });
 
   inputBusca.addEventListener('focus', function () {
-    if (inputBusca.value.length >= 2) {
-      const produtos = buscarProdutos(inputBusca.value);
-      renderizarResultadosBusca(produtos);
-    }
+    if (inputBusca.value.length >= 2) renderizarResultadosBusca(buscarProdutos(inputBusca.value));
   });
 
-  // Fecha resultados ao clicar fora
   document.addEventListener('click', function (e) {
-    if (!inputBusca.contains(e.target) && !divResultados.contains(e.target)) {
-      divResultados.style.display = 'none';
-    }
+    if (!inputBusca.contains(e.target) && !divResultados.contains(e.target)) divResultados.style.display = 'none';
   });
+
+  document.getElementById('btn-buscar-ptax').addEventListener('click', buscarPtax);
   document.getElementById('sel-unidade').addEventListener('change', aplicarUnidade);
   document.getElementById('precoUSD').addEventListener('input', render);
   document.getElementById('cotacao').addEventListener('input', render);
@@ -2447,17 +2088,39 @@ function init() {
   document.getElementById('btn-pdf').addEventListener('click', gerarCotacaoPDF);
   document.getElementById('btn-whatsapp').addEventListener('click', compartilharWhatsApp);
 
-  // Define validade default: 7 dias a partir de hoje
+  // Botão de diagnóstico da API Sheets
+  const btnTestar = document.getElementById('btn-testar-api');
+  if (btnTestar) {
+    btnTestar.addEventListener('click', function () {
+      const statusEl = document.getElementById('api-status');
+      statusEl.style.color = '#92400e';
+      statusEl.textContent = '⏳ Testando...';
+      registrarECobrarNumero({
+        vendedor: 'TESTE', empresa: 'TESTE', cliente: 'TESTE',
+        cnpjCliente: '00.000.000/0001-00', produto: 'TESTE',
+        quantidade: '1 kg', valorUSD: '1.00', valorBRL: '5.00'
+      }).then(function (resp) {
+        statusEl.style.color = '#047857';
+        statusEl.textContent = '✅ API funcionando! Número: ' + resp.numero;
+      }).catch(function (err) {
+        statusEl.style.color = '#b91c1c';
+        statusEl.textContent = '❌ ' + err.message;
+        console.error('Diagnóstico API Sheets:', err);
+      });
+    });
+  }
+
+  // Validade default: 7 dias
   const hoje = new Date();
   hoje.setDate(hoje.getDate() + 7);
   document.getElementById('cot-validade').value = hoje.toISOString().split('T')[0];
 
-  // Popula o dropdown de vendedores e aplica o último selecionado (se houver)
   popularVendedores();
-
-  // Estado inicial
   atualizarNCMs();
   aplicarModo('bruto-liq');
+
+  // PTAX automático ao carregar
+  buscarPtax();
 }
 
 if (document.readyState === 'loading') {
