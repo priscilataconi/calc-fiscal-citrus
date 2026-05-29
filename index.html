@@ -1576,20 +1576,28 @@ async function registrarECobrarNumero(dados) {
 // ============================================================
 
 async function gerarCotacaoPDF() {
+  const vendedor = obterVendedorSelecionado();
+  if (!vendedor) { mostrarToast('⚠️ Selecione um vendedor antes de gerar o PDF'); return; }
+
+  // Verifica se as bibliotecas carregaram
+  if (typeof html2canvas === 'undefined') {
+    alert('A biblioteca de PDF não carregou. Recarregue a página (F5) e tente novamente.');
+    return;
+  }
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert('A biblioteca jsPDF não carregou. Recarregue a página (F5) e tente novamente.');
+    return;
+  }
+
   const r = calcular();
   const p = r.p;
   const empresaKey = document.getElementById('sel-empresa').value;
   const cadastro = EMPRESAS_CADASTRO[empresaKey];
-  const vendedor = obterVendedorSelecionado();
-  const familiaKey = document.getElementById('sel-familia').value;
   const ncm = document.getElementById('sel-ncm').value;
   const ncmDescricao = document.getElementById('sel-ncm').options[document.getElementById('sel-ncm').selectedIndex].text;
   const operacaoSel = document.getElementById('sel-operacao');
   const operacaoTexto = operacaoSel.options[operacaoSel.selectedIndex].text;
   const estado = document.getElementById('sel-estado').value;
-
-  if (!vendedor) { mostrarToast('⚠️ Selecione um vendedor antes de gerar o PDF'); return; }
-
   const cliRazao = (document.getElementById('cli-razao').value || '').trim() || '[NOME DO CLIENTE]';
   const cliCnpj = (document.getElementById('cli-cnpj').value || '').trim() || '—';
   const cliContato = (document.getElementById('cli-contato').value || '').trim() || '—';
@@ -1601,80 +1609,69 @@ async function gerarCotacaoPDF() {
   const obs = (document.getElementById('cot-obs').value || '').trim();
   const dataEmissao = new Date().toLocaleDateString('pt-BR');
   const validadeFmt = validade ? new Date(validade + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
-
-  const precoUnitUSD = r.precoBrutoUSD;
-  const precoUnitBRL = r.precoBrutoBRL;
   const qtd = r.qtd;
-  const totalUSD = precoUnitUSD * qtd;
-  const totalBRL = precoUnitBRL * qtd;
+  const totalUSD = r.precoBrutoUSD * qtd;
+  const totalBRL = r.precoBrutoBRL * qtd;
 
-  // ── Obter número único (compartilhado com WhatsApp) ──
   const produtoTxt = produtoSelecionadoAtual
     ? produtoSelecionadoAtual.codigo + ' — ' + produtoSelecionadoAtual.descricao
     : p.familia.label + ' (' + ncm + ')';
 
   const numeroCot = await obterNumeroCotacao({
-    vendedor:    vendedor.nome,
-    empresa:     cadastro.razaoSocial,
-    cliente:     cliRazao,
-    cnpjCliente: cliCnpj,
-    produto:     produtoTxt,
-    quantidade:  qtd + ' ' + unidade,
-    valorUSD:    totalUSD.toFixed(2),
-    valorBRL:    totalBRL.toFixed(2)
+    vendedor: vendedor.nome, empresa: cadastro.razaoSocial,
+    cliente: cliRazao, cnpjCliente: cliCnpj, produto: produtoTxt,
+    quantidade: qtd + ' ' + unidade,
+    valorUSD: totalUSD.toFixed(2), valorBRL: totalBRL.toFixed(2)
   });
 
-  // ── Monta HTML da cotação ──
-  const cotacaoHTML = `
-    <div id="cotacao-render" style="width:794px;background:#fff;font-family:'Helvetica',Arial,sans-serif;color:#1a2332;padding:0;">
+  mostrarToast('⏳ Gerando PDF...');
+
+  // Container off-screen com largura explícita (necessário para o html2canvas)
+  const container = document.createElement('div');
+  container.style.cssText = 'position:absolute;left:-9999px;top:0;width:794px;';
+  container.innerHTML = `
+    <div id="cotacao-render" style="width:794px;background:#fff;font-family:Arial,sans-serif;color:#1a2332;">
       <div style="background:linear-gradient(135deg,${cadastro.corPrimaria} 0%,${cadastro.corSecundaria} 100%);color:#fff;padding:24px 36px;display:flex;justify-content:space-between;align-items:center;">
         <div style="display:flex;align-items:center;gap:16px;">
           <div id="logo-slot"></div>
           <div>
-            <div style="font-size:22px;font-weight:700;letter-spacing:-0.3px;">${cadastro.razaoSocial}</div>
+            <div style="font-size:22px;font-weight:700;">${cadastro.razaoSocial}</div>
             <div style="font-size:11px;opacity:0.9;margin-top:2px;">CNPJ ${cadastro.cnpj} · IE ${cadastro.ie}</div>
             <div style="font-size:11px;opacity:0.9;">${cadastro.endereco}</div>
             <div style="font-size:11px;opacity:0.9;">${cadastro.cidade} · ${cadastro.telefone}</div>
           </div>
         </div>
         <div style="text-align:right;">
-          <div style="font-size:10px;opacity:0.85;letter-spacing:1px;text-transform:uppercase;">Proposta Comercial</div>
+          <div style="font-size:10px;opacity:0.85;text-transform:uppercase;letter-spacing:1px;">Proposta Comercial</div>
           <div style="font-size:26px;font-weight:700;margin-top:2px;">${numeroCot}</div>
           <div style="font-size:11px;opacity:0.9;margin-top:4px;">Emitida em: ${dataEmissao}</div>
-          <div style="font-size:11px;opacity:0.9;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:4px;margin-top:4px;display:inline-block;">Válida até: ${validadeFmt}</div>
+          <div style="font-size:11px;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:4px;margin-top:4px;display:inline-block;">Válida até: ${validadeFmt}</div>
         </div>
       </div>
 
       <div style="padding:20px 36px;background:#f8fafc;border-bottom:1px solid #e2e8f0;">
         <div style="font-size:10px;font-weight:700;color:${cadastro.corPrimaria};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Destinatário</div>
-        <div style="font-size:15px;font-weight:600;color:#1a2332;margin-bottom:4px;">${cliRazao}</div>
-        <div style="font-size:12px;color:#475569;">CNPJ: ${cliCnpj} &nbsp;·&nbsp; A/C: ${cliContato} &nbsp;·&nbsp; ${cliEmail}</div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:4px;">${cliRazao}</div>
+        <div style="font-size:12px;color:#475569;">CNPJ: ${cliCnpj} · A/C: ${cliContato} · ${cliEmail}</div>
       </div>
 
       <div style="padding:24px 36px;">
         <div style="font-size:10px;font-weight:700;color:${cadastro.corPrimaria};text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Produto Cotado</div>
         <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
-          <thead>
-            <tr style="background:${cadastro.corPrimaria};color:#fff;">
-              <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;">Descrição</th>
-              <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:600;text-transform:uppercase;">NCM</th>
-              <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:600;text-transform:uppercase;">Quantidade</th>
-              <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:600;text-transform:uppercase;">Unit. USD</th>
-              <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:600;text-transform:uppercase;">Total USD</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="border-bottom:1px solid #e2e8f0;">
-              <td style="padding:14px 12px;font-size:13px;color:#1a2332;">
-                <strong>${p.familia.label}</strong><br>
-                <span style="font-size:11px;color:#64748b;">${ncmDescricao.split('— ')[1] || ''}</span>
-              </td>
-              <td style="padding:14px 12px;text-align:center;font-size:12px;font-family:monospace;color:#475569;">${ncm}</td>
-              <td style="padding:14px 12px;text-align:right;font-size:13px;">${qtd.toLocaleString('pt-BR')} ${unidade}</td>
-              <td style="padding:14px 12px;text-align:right;font-size:13px;font-weight:600;">${fmtUSD(precoUnitUSD)}</td>
-              <td style="padding:14px 12px;text-align:right;font-size:13px;font-weight:700;color:${cadastro.corPrimaria};">${fmtUSD2(totalUSD)}</td>
-            </tr>
-          </tbody>
+          <thead><tr style="background:${cadastro.corPrimaria};color:#fff;">
+            <th style="padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;">Descrição</th>
+            <th style="padding:10px 12px;text-align:center;font-size:11px;text-transform:uppercase;">NCM</th>
+            <th style="padding:10px 12px;text-align:right;font-size:11px;text-transform:uppercase;">Quantidade</th>
+            <th style="padding:10px 12px;text-align:right;font-size:11px;text-transform:uppercase;">Unit. USD</th>
+            <th style="padding:10px 12px;text-align:right;font-size:11px;text-transform:uppercase;">Total USD</th>
+          </tr></thead>
+          <tbody><tr style="border-bottom:1px solid #e2e8f0;">
+            <td style="padding:14px 12px;font-size:13px;"><strong>${p.familia.label}</strong><br><span style="font-size:11px;color:#64748b;">${ncmDescricao.split('— ')[1] || ''}</span></td>
+            <td style="padding:14px 12px;text-align:center;font-size:12px;color:#475569;">${ncm}</td>
+            <td style="padding:14px 12px;text-align:right;font-size:13px;">${qtd.toLocaleString('pt-BR')} ${unidade}</td>
+            <td style="padding:14px 12px;text-align:right;font-size:13px;font-weight:600;">${fmtUSD(r.precoBrutoUSD)}</td>
+            <td style="padding:14px 12px;text-align:right;font-size:13px;font-weight:700;color:${cadastro.corPrimaria};">${fmtUSD2(totalUSD)}</td>
+          </tr></tbody>
         </table>
 
         <div style="background:linear-gradient(135deg,${cadastro.corPrimaria} 0%,${cadastro.corSecundaria} 100%);color:#fff;padding:20px 24px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
@@ -1684,96 +1681,90 @@ async function gerarCotacaoPDF() {
           </div>
           <div style="text-align:right;">
             <div style="font-size:28px;font-weight:700;">${fmtUSD2(totalUSD)}</div>
-            <div style="font-size:13px;opacity:0.95;margin-top:2px;">${fmtBRL(totalBRL)}</div>
+            <div style="font-size:13px;margin-top:2px;">${fmtBRL(totalBRL)}</div>
           </div>
         </div>
 
         <div style="font-size:10px;font-weight:700;color:${cadastro.corPrimaria};text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Condições Comerciais</div>
-        <table style="width:100%;border-collapse:collapse;background:#f8fafc;border-radius:6px;overflow:hidden;margin-bottom:20px;">
-          <tr><td style="padding:10px 14px;width:30%;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;background:#f1f5f9;">Incoterm</td><td style="padding:10px 14px;font-size:13px;">${incoterm}</td></tr>
-          <tr style="border-top:1px solid #e2e8f0;"><td style="padding:10px 14px;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;background:#f1f5f9;">Condição de Pagamento</td><td style="padding:10px 14px;font-size:13px;">${pagto}</td></tr>
-          <tr style="border-top:1px solid #e2e8f0;"><td style="padding:10px 14px;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;background:#f1f5f9;">Prazo de Entrega</td><td style="padding:10px 14px;font-size:13px;">${prazo}</td></tr>
-          <tr style="border-top:1px solid #e2e8f0;"><td style="padding:10px 14px;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;background:#f1f5f9;">Validade da Cotação</td><td style="padding:10px 14px;font-size:13px;font-weight:600;">${validadeFmt}</td></tr>
-          <tr style="border-top:1px solid #e2e8f0;"><td style="padding:10px 14px;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;background:#f1f5f9;">Tributação</td><td style="padding:10px 14px;font-size:12px;">${p.operacao === 'export' ? 'Operação de exportação — imune (ICMS, PIS/COFINS, IPI)' : operacaoTexto + (p.operacao === 'interno-out' ? ' (' + estado + ')' : '')}<br><span style="font-size:11px;color:#64748b;">${p.icmsLabel !== 'Imune (exportação)' ? 'ICMS: ' + p.icmsLabel + ' · PIS+COFINS: ' + p.pcLabel : 'Conforme regimes constitucionais'}</span></td></tr>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+          <tr><td style="padding:10px 14px;width:32%;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;background:#f1f5f9;">Incoterm</td><td style="padding:10px 14px;font-size:13px;background:#f8fafc;">${incoterm}</td></tr>
+          <tr><td style="padding:10px 14px;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;background:#f1f5f9;">Condição de Pagamento</td><td style="padding:10px 14px;font-size:13px;background:#f8fafc;">${pagto}</td></tr>
+          <tr><td style="padding:10px 14px;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;background:#f1f5f9;">Prazo de Entrega</td><td style="padding:10px 14px;font-size:13px;background:#f8fafc;">${prazo}</td></tr>
+          <tr><td style="padding:10px 14px;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;background:#f1f5f9;">Validade da Cotação</td><td style="padding:10px 14px;font-size:13px;font-weight:700;background:#f8fafc;">${validadeFmt}</td></tr>
+          <tr><td style="padding:10px 14px;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;background:#f1f5f9;">Tributação</td><td style="padding:10px 14px;font-size:12px;background:#f8fafc;">${p.operacao === 'export' ? 'Exportação — imune (ICMS, PIS/COFINS, IPI)' : operacaoTexto + (p.operacao === 'interno-out' ? ' (' + estado + ')' : '')}<br><span style="font-size:11px;color:#64748b;">${p.icmsLabel !== 'Imune (exportação)' ? 'ICMS: ' + p.icmsLabel + ' · PIS+COFINS: ' + p.pcLabel : ''}</span></td></tr>
         </table>
 
-        ${obs ? `<div style="font-size:10px;font-weight:700;color:${cadastro.corPrimaria};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Observações</div><div style="background:#fef9e7;border-left:3px solid #D4A04A;padding:12px 14px;border-radius:4px;font-size:12px;color:#6B5418;line-height:1.5;margin-bottom:20px;">${obs.replace(/\n/g,'<br>')}</div>` : ''}
+        ${obs ? '<div style="font-size:10px;font-weight:700;color:' + cadastro.corPrimaria + ';text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Observações</div><div style="background:#fef9e7;border-left:3px solid #D4A04A;padding:12px 14px;border-radius:4px;font-size:12px;color:#6B5418;line-height:1.5;margin-bottom:20px;">' + obs.replace(/\n/g,'<br>') + '</div>' : ''}
 
         <div style="margin-top:30px;padding-top:20px;border-top:2px solid ${cadastro.corPrimaria};display:flex;justify-content:space-between;align-items:flex-end;">
           <div>
-            <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Atenciosamente,</div>
-            <div style="font-size:14px;font-weight:700;color:#1a2332;margin-top:8px;">${vendedor.nome}</div>
+            <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;">Atenciosamente,</div>
+            <div style="font-size:14px;font-weight:700;margin-top:8px;">${vendedor.nome}</div>
             <div style="font-size:11px;color:#64748b;">Departamento Comercial · ${cadastro.razaoSocial}</div>
             <div style="font-size:11px;color:#64748b;margin-top:4px;">📱 ${vendedor.telefone}</div>
           </div>
-          <div style="text-align:right;font-size:9px;color:#94a3b8;">Cotação emitida em ${dataEmissao}<br>${numeroCot} · ${cadastro.nomeFantasia}</div>
+          <div style="text-align:right;font-size:9px;color:#94a3b8;">Emitida em ${dataEmissao}<br>${numeroCot} · ${cadastro.nomeFantasia}</div>
         </div>
       </div>
-    </div>
-  `;
+    </div>`;
 
-  const container = document.createElement('div');
-  container.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;';
-  container.innerHTML = cotacaoHTML;
   document.body.appendChild(container);
 
-  // Injeta o logo via DOM depois de criar o container
-  // (evita string base64 gigante dentro do template HTML que trava o html2canvas)
+  // Injeta o logo via DOM (não via string, para não travar o html2canvas)
   if (logosBase64[empresaKey]) {
-    const logoSlot = container.querySelector('#logo-slot');
-    if (logoSlot) {
-      const imgLogo = document.createElement('img');
-      imgLogo.src = logosBase64[empresaKey];
-      imgLogo.style.cssText = 'height:60px;width:auto;background:#fff;padding:6px;border-radius:6px;';
-      logoSlot.appendChild(imgLogo);
+    const slot = container.querySelector('#logo-slot');
+    if (slot) {
+      const img = document.createElement('img');
+      img.src = logosBase64[empresaKey];
+      img.style.cssText = 'height:60px;width:auto;background:#fff;padding:6px;border-radius:6px;';
+      slot.appendChild(img);
     }
   }
 
   const alvo = container.querySelector('#cotacao-render');
 
-  mostrarToast('⏳ Gerando PDF...');
+  // Aguarda 300ms para o browser renderizar o elemento
+  await new Promise(function(res) { setTimeout(res, 300); });
 
-  const imgs = alvo.querySelectorAll('img');
-  const promessasImg = Array.from(imgs).map(function (img) {
-    if (img.complete) return Promise.resolve();
-    return new Promise(function (resolve) {
-      img.onload = resolve; img.onerror = resolve;
-      setTimeout(resolve, 1500);
+  try {
+    const canvas = await html2canvas(alvo, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: '#ffffff',
+      logging: false,
+      width: 794,
+      windowWidth: 794
     });
-  });
 
-  Promise.all(promessasImg).then(function () {
-    return html2canvas(alvo, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
-  }).then(function (canvas) {
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
     const jsPDF = window.jspdf.jsPDF;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
-    const imgW = pageW;
-    const imgH = (canvas.height * imgW) / canvas.width;
+    const imgH = (canvas.height * pageW) / canvas.width;
 
     if (imgH <= pageH) {
-      pdf.addImage(imgData, 'JPEG', 0, 0, imgW, imgH);
+      pdf.addImage(imgData, 'JPEG', 0, 0, pageW, imgH);
     } else {
       let restante = imgH, posY = 0;
       while (restante > 0) {
-        pdf.addImage(imgData, 'JPEG', 0, posY, imgW, imgH);
+        pdf.addImage(imgData, 'JPEG', 0, posY, pageW, imgH);
         restante -= pageH; posY -= pageH;
         if (restante > 0) pdf.addPage();
       }
     }
 
-    const empresaCod = cadastro.nomeFantasia.replace(/\s+/g, '_');
-    const cliRazaoFmt = (document.getElementById('cli-razao').value || 'cliente').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30);
-    pdf.save(`${numeroCot}_${empresaCod}_${cliRazaoFmt}.pdf`);
+    const nomeArquivo = numeroCot + '_' + cadastro.nomeFantasia.replace(/\s+/g,'_') + '_' + cliRazao.replace(/[^a-zA-Z0-9]/g,'_').slice(0,25) + '.pdf';
+    pdf.save(nomeArquivo);
     document.body.removeChild(container);
     mostrarToast('✅ PDF gerado: ' + numeroCot);
-  }).catch(function (err) {
-    console.error('Erro ao gerar PDF:', err);
+
+  } catch (err) {
     document.body.removeChild(container);
-    mostrarToast('⚠️ Erro ao gerar PDF: ' + err.message);
-  });
+    console.error('Erro ao gerar PDF:', err);
+    alert('Erro ao gerar PDF: ' + err.message + '\n\nRecarregue a página (F5) e tente novamente.');
+  }
 }
 
 // ============================================================
@@ -2168,6 +2159,10 @@ function renderizarBarraUsuario(data) {
       : '') +
     '<button class="logout-btn" onclick="fazerLogout()">Sair</button>';
   headerEl.appendChild(bar);
+
+  // Garante PTAX atualizado após o login — se ainda estiver no valor padrão, busca de novo
+  const cotacaoAtual = parseFloat(document.getElementById('cotacao').value) || 0;
+  if (Math.abs(cotacaoAtual - 5.20) < 0.01) buscarPtax();
 }
 
 function fazerLogout() {
@@ -2286,9 +2281,11 @@ function init() {
   // Pré-carrega logos em base64 para o PDF
   precarregarLogos();
 
-  // Login automático primeiro; PTAX só busca depois que login terminar
-  // (evita conflito de rede entre as duas chamadas simultâneas)
-  tentarLoginAutomatico().finally(buscarPtax);
+  // Login automático (roda em paralelo com o PTAX)
+  tentarLoginAutomatico();
+
+  // PTAX: busca imediatamente ao carregar a página
+  buscarPtax();
 }
 
 if (document.readyState === 'loading') {
