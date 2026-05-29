@@ -1624,17 +1624,12 @@ async function gerarCotacaoPDF() {
     valorBRL:    totalBRL.toFixed(2)
   });
 
-  // ── Monta HTML do logo (base64 já carregado) ──
-  const logoHTML = logosBase64[empresaKey]
-    ? '<img src="' + logosBase64[empresaKey] + '" alt="' + cadastro.nomeFantasia + '" style="height:60px;width:auto;background:#fff;padding:6px;border-radius:6px;">'
-    : '';
-
   // ── Monta HTML da cotação ──
   const cotacaoHTML = `
     <div id="cotacao-render" style="width:794px;background:#fff;font-family:'Helvetica',Arial,sans-serif;color:#1a2332;padding:0;">
       <div style="background:linear-gradient(135deg,${cadastro.corPrimaria} 0%,${cadastro.corSecundaria} 100%);color:#fff;padding:24px 36px;display:flex;justify-content:space-between;align-items:center;">
         <div style="display:flex;align-items:center;gap:16px;">
-          ${logoHTML}
+          <div id="logo-slot"></div>
           <div>
             <div style="font-size:22px;font-weight:700;letter-spacing:-0.3px;">${cadastro.razaoSocial}</div>
             <div style="font-size:11px;opacity:0.9;margin-top:2px;">CNPJ ${cadastro.cnpj} · IE ${cadastro.ie}</div>
@@ -1721,6 +1716,19 @@ async function gerarCotacaoPDF() {
   container.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;';
   container.innerHTML = cotacaoHTML;
   document.body.appendChild(container);
+
+  // Injeta o logo via DOM depois de criar o container
+  // (evita string base64 gigante dentro do template HTML que trava o html2canvas)
+  if (logosBase64[empresaKey]) {
+    const logoSlot = container.querySelector('#logo-slot');
+    if (logoSlot) {
+      const imgLogo = document.createElement('img');
+      imgLogo.src = logosBase64[empresaKey];
+      imgLogo.style.cssText = 'height:60px;width:auto;background:#fff;padding:6px;border-radius:6px;';
+      logoSlot.appendChild(imgLogo);
+    }
+  }
+
   const alvo = container.querySelector('#cotacao-render');
 
   mostrarToast('⏳ Gerando PDF...');
@@ -2278,11 +2286,9 @@ function init() {
   // Pré-carrega logos em base64 para o PDF
   precarregarLogos();
 
-  // Tenta login automático se o usuário salvou as credenciais antes
-  tentarLoginAutomatico();
-
-  // PTAX automático ao carregar
-  buscarPtax();
+  // Login automático primeiro; PTAX só busca depois que login terminar
+  // (evita conflito de rede entre as duas chamadas simultâneas)
+  tentarLoginAutomatico().finally(buscarPtax);
 }
 
 if (document.readyState === 'loading') {
