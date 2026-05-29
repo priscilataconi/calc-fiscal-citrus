@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Calculadora Fiscal Multi-CNPJ — Citrus Juice</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -49,465 +47,137 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
-  .toggle-buttons {
-    display: flex;
-    background: #e2e8f0;
-    border-radius: 8px;
-    padding: 4px;
-  }
-  .toggle-btn {
-    padding: 7px 14px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 500;
-    color: #64748b;
-    border-radius: 6px;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-  .toggle-btn.active {
-    background: #1B2E5E;
-    color: #fff;
-    box-shadow: 0 2px 6px rgba(27, 46, 94, 0.2);
-  }
+  .toggle-buttons { display: flex; background: #e2e8f0; border-radius: 8px; padding: 4px; }
+  .toggle-btn { padding: 7px 14px; border: none; background: transparent; cursor: pointer; font-size: 12px; font-weight: 500; color: #64748b; border-radius: 6px; }
+  .toggle-btn.active { background: #1B2E5E; color: #fff; }
   .toggle-btn.gold.active { background: #D4A04A; }
 
-  .scenario-banner {
-    padding: 12px 32px;
-    background: #fef9e7;
-    border-bottom: 1px solid #f3e0b0;
-    font-size: 12px;
-    color: #6B5418;
-  }
+  .scenario-banner { padding: 12px 32px; background: #fef9e7; border-bottom: 1px solid #f3e0b0; font-size: 12px; color: #6B5418; }
   .scenario-banner strong { color: #1B2E5E; }
 
   .ptax-bar {
     background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
     border-bottom: 1px solid #bae6fd;
     padding: 12px 32px;
-    display: flex;
-    gap: 14px;
-    flex-wrap: wrap;
-    align-items: center;
+    display: flex; gap: 14px; flex-wrap: wrap; align-items: center;
     font-size: 12px;
   }
-  .ptax-title {
-    font-size: 11px;
-    font-weight: 700;
-    color: #0369a1;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .ptax-bar a {
-    color: #0369a1;
-    font-weight: 700;
-    text-decoration: underline;
-  }
+  .ptax-title { font-size: 11px; font-weight: 700; color: #0369a1; text-transform: uppercase; letter-spacing: 0.5px; }
+  .ptax-bar a { color: #0369a1; font-weight: 700; text-decoration: underline; }
 
-  .body {
-    display: grid;
-    grid-template-columns: 380px 1fr;
-    gap: 0;
-  }
+  .body { display: grid; grid-template-columns: 380px 1fr; gap: 0; }
   .inputs-section, .outputs-section { padding: 24px 28px; }
-  .inputs-section {
-    background: #fafbfc;
-    border-right: 1px solid #e2e8f0;
-  }
-  .section-title {
-    font-size: 11px;
-    font-weight: 700;
-    color: #1B2E5E;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 14px;
-    padding-bottom: 6px;
-    border-bottom: 2px solid #D4A04A;
-  }
+  .inputs-section { background: #fafbfc; border-right: 1px solid #e2e8f0; }
+  .section-title { font-size: 11px; font-weight: 700; color: #1B2E5E; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; padding-bottom: 6px; border-bottom: 2px solid #D4A04A; }
   .section-title:not(:first-of-type) { margin-top: 20px; }
 
   .input-group { margin-bottom: 12px; }
-  .input-group label {
-    display: block;
-    font-size: 11px;
-    font-weight: 600;
-    color: #475569;
-    margin-bottom: 5px;
-  }
+  .input-group label { display: block; font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 5px; }
   .hint { font-weight: 400; color: #94a3b8; font-size: 10px; }
   .input-wrapper { position: relative; display: flex; align-items: center; }
-  .input-prefix, .input-suffix {
-    position: absolute;
-    font-size: 12px;
-    color: #94a3b8;
-    font-weight: 500;
-    pointer-events: none;
-  }
+  .input-prefix, .input-suffix { position: absolute; font-size: 12px; color: #94a3b8; font-weight: 500; pointer-events: none; }
   .input-prefix { left: 11px; }
   .input-suffix { right: 11px; }
   .input-group input, .input-group select {
-    width: 100%;
-    padding: 9px 11px;
-    border: 1.5px solid #cbd5e1;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
-    color: #1a2332;
-    background: #fff;
-    font-family: inherit;
+    width: 100%; padding: 9px 11px; border: 1.5px solid #cbd5e1; border-radius: 6px;
+    font-size: 13px; font-weight: 500; color: #1a2332; background: #fff; font-family: inherit;
   }
   .input-group input.has-prefix { padding-left: 34px; }
   .input-group input.has-suffix { padding-right: 36px; }
-  .input-group input:focus, .input-group select:focus {
-    outline: none;
-    border-color: #1B2E5E;
-    box-shadow: 0 0 0 3px rgba(27, 46, 94, 0.1);
-  }
+  .input-group input:focus, .input-group select:focus { outline: none; border-color: #1B2E5E; box-shadow: 0 0 0 3px rgba(27, 46, 94, 0.1); }
   .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
-  .results-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 14px;
-    margin-bottom: 14px;
-  }
-  .result-card.highlight-usd {
-    background: linear-gradient(135deg, #D4A04A 0%, #B8862F 100%);
-    color: #fff;
-    padding: 18px 20px;
-    border-radius: 8px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .result-card.highlight-usd .label {
-    color: rgba(255,255,255,0.95);
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .result-card.highlight-usd .value {
-    color: #fff;
-    font-size: 24px;
-    font-weight: 700;
-  }
-  .result-card.highlight-brl {
-    background: linear-gradient(135deg, #1B2E5E 0%, #3A5A8C 100%);
-    color: #fff;
-    padding: 14px 18px;
-    border-radius: 8px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .result-card.highlight-brl .label {
-    color: rgba(255,255,255,0.85);
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .result-card.highlight-brl .value {
-    color: #fff;
-    font-size: 17px;
-    font-weight: 700;
-  }
+  .results-grid { display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 14px; }
+  .result-card.highlight-usd { background: linear-gradient(135deg, #D4A04A 0%, #B8862F 100%); color: #fff; padding: 18px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .result-card.highlight-usd .label { color: rgba(255,255,255,0.95); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .result-card.highlight-usd .value { color: #fff; font-size: 24px; font-weight: 700; }
+  .result-card.highlight-brl { background: linear-gradient(135deg, #1B2E5E 0%, #3A5A8C 100%); color: #fff; padding: 14px 18px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .result-card.highlight-brl .label { color: rgba(255,255,255,0.85); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .result-card.highlight-brl .value { color: #fff; font-size: 17px; font-weight: 700; }
 
-  .breakdown {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 14px 16px;
-    margin-bottom: 12px;
-  }
-  .breakdown-title {
-    font-size: 10px;
-    font-weight: 700;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    margin-bottom: 8px;
-  }
-  .breakdown-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    padding: 4px 0;
-    color: #475569;
-  }
-  .breakdown-row.bold {
-    font-weight: 600;
-    color: #1a2332;
-    border-top: 1px solid #e2e8f0;
-    margin-top: 4px;
-    padding-top: 8px;
-  }
+  .breakdown { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; }
+  .breakdown-title { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+  .breakdown-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; color: #475569; }
+  .breakdown-row.bold { font-weight: 600; color: #1a2332; border-top: 1px solid #e2e8f0; margin-top: 4px; padding-top: 8px; }
   .breakdown-row .val { font-variant-numeric: tabular-nums; font-weight: 500; }
   .breakdown-row .neg { color: #b91c1c; }
   .breakdown-row .pos { color: #047857; }
 
-  .params-applied {
-    background: #f0f9ff;
-    border: 1px solid #bae6fd;
-    border-radius: 8px;
-    padding: 12px 14px;
-    margin-bottom: 12px;
-    font-size: 11px;
-  }
-  .params-applied .params-title {
-    font-weight: 700;
-    color: #0369a1;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    font-size: 10px;
-    margin-bottom: 6px;
-  }
-  .params-applied .param-line {
-    display: flex;
-    justify-content: space-between;
-    color: #075985;
-    padding: 2px 0;
-  }
-  .params-applied .param-line .val {
-    font-variant-numeric: tabular-nums;
-    font-weight: 600;
-  }
+  .params-applied { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; font-size: 11px; }
+  .params-applied .params-title { font-weight: 700; color: #0369a1; text-transform: uppercase; letter-spacing: 0.8px; font-size: 10px; margin-bottom: 6px; }
+  .params-applied .param-line { display: flex; justify-content: space-between; color: #075985; padding: 2px 0; }
+  .params-applied .param-line .val { font-variant-numeric: tabular-nums; font-weight: 600; }
 
-  .alert {
-    padding: 10px 12px;
-    border-radius: 6px;
-    font-size: 11px;
-    margin-bottom: 10px;
-    line-height: 1.4;
-  }
+  .alert { padding: 10px 12px; border-radius: 6px; font-size: 11px; margin-bottom: 10px; line-height: 1.4; }
   .alert.warning { background: #fef3c7; border-left: 3px solid #f59e0b; color: #78350f; }
   .alert.info { background: #dbeafe; border-left: 3px solid #3b82f6; color: #1e40af; }
   .alert strong { display: block; margin-bottom: 2px; }
 
-  .reforma-section {
-    margin-top: 20px;
-    border: 2px solid #c4b5fd;
-    border-radius: 10px;
-    overflow: hidden;
-    background: #faf5ff;
-  }
-  .reforma-header {
-    background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%);
-    color: #fff;
-    padding: 14px 18px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  .reforma-header h3 {
-    font-size: 13px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .reforma-header .reforma-subtitle {
-    font-size: 11px;
-    opacity: 0.9;
-    font-weight: 300;
-  }
-  .reforma-config {
-    background: #ede9fe;
-    padding: 12px 18px;
-    border-bottom: 1px solid #c4b5fd;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    flex-wrap: wrap;
-  }
-  .reforma-config label {
-    font-size: 11px;
-    font-weight: 700;
-    color: #5b21b6;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-  }
-  .reforma-config input[type=number] {
-    width: 90px;
-    padding: 6px 10px;
-    border: 1.5px solid #a78bfa;
-    border-radius: 5px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #5b21b6;
-    text-align: right;
-    font-family: inherit;
-  }
-  .reforma-config .config-hint {
-    font-size: 10.5px;
-    color: #6b21a8;
-    font-style: italic;
-  }
-  .reforma-badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 10px;
-    font-weight: 700;
-    margin-left: 6px;
-  }
+  .reforma-section { margin-top: 20px; border: 2px solid #c4b5fd; border-radius: 10px; overflow: hidden; background: #faf5ff; }
+  .reforma-header { background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%); color: #fff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .reforma-header h3 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .reforma-header .reforma-subtitle { font-size: 11px; opacity: 0.9; font-weight: 300; }
+  .reforma-config { background: #ede9fe; padding: 12px 18px; border-bottom: 1px solid #c4b5fd; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .reforma-config label { font-size: 11px; font-weight: 700; color: #5b21b6; text-transform: uppercase; letter-spacing: 0.3px; }
+  .reforma-config input[type=number] { width: 90px; padding: 6px 10px; border: 1.5px solid #a78bfa; border-radius: 5px; font-size: 13px; font-weight: 600; color: #5b21b6; text-align: right; font-family: inherit; }
+  .reforma-config .config-hint { font-size: 10.5px; color: #6b21a8; font-style: italic; }
+  .reforma-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; margin-left: 6px; }
   .reforma-badge.suco { background: #fbbf24; color: #78350f; }
   .reforma-badge.export { background: #34d399; color: #064e3b; }
   .reforma-badge.padrao { background: #d1d5db; color: #374151; }
 
-  .reforma-cols {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 1px;
-    background: #c4b5fd;
-  }
-  .reforma-col {
-    background: #fff;
-    padding: 14px 16px;
-  }
-  .reforma-col-header {
-    font-weight: 700;
-    text-align: center;
-    padding-bottom: 10px;
-    margin-bottom: 10px;
-    border-bottom: 2px solid;
-  }
+  .reforma-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: #c4b5fd; }
+  .reforma-col { background: #fff; padding: 14px 16px; }
+  .reforma-col-header { font-weight: 700; text-align: center; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 2px solid; }
   .reforma-col.atual .reforma-col-header { color: #1B2E5E; border-bottom-color: #1B2E5E; }
   .reforma-col.transicao .reforma-col-header { color: #B45309; border-bottom-color: #B45309; }
   .reforma-col.pleno .reforma-col-header { color: #6d28d9; border-bottom-color: #6d28d9; }
-  .reforma-col-header .ano {
-    font-size: 18px;
-    display: block;
-  }
-  .reforma-col-header .legenda {
-    font-size: 10px;
-    text-transform: uppercase;
-    font-weight: 600;
-    opacity: 0.7;
-    margin-top: 2px;
-    letter-spacing: 0.3px;
-  }
-  .reforma-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 11.5px;
-    padding: 4px 0;
-    color: #475569;
-  }
-  .reforma-row .val {
-    font-variant-numeric: tabular-nums;
-    font-weight: 500;
-  }
+  .reforma-col-header .ano { font-size: 18px; display: block; }
+  .reforma-col-header .legenda { font-size: 10px; text-transform: uppercase; font-weight: 600; opacity: 0.7; margin-top: 2px; letter-spacing: 0.3px; }
+  .reforma-row { display: flex; justify-content: space-between; font-size: 11.5px; padding: 4px 0; color: #475569; }
+  .reforma-row .val { font-variant-numeric: tabular-nums; font-weight: 500; }
   .reforma-row.extinto .val { color: #9ca3af; font-style: italic; }
   .reforma-row.ativo .val { color: #1a2332; font-weight: 600; }
-  .reforma-row.divider {
-    border-top: 1px dashed #e2e8f0;
-    margin-top: 6px;
-    padding-top: 6px;
-  }
+  .reforma-row.divider { border-top: 1px dashed #e2e8f0; margin-top: 6px; padding-top: 6px; }
   .reforma-row.carga { font-weight: 700; color: #b91c1c; }
   .reforma-row.liq { font-weight: 700; color: #047857; font-size: 12px; }
   .reforma-row.liq .val { color: #047857; }
-
-  .reforma-footnote {
-    background: #f5f3ff;
-    border-top: 1px solid #c4b5fd;
-    padding: 10px 18px;
-    font-size: 10.5px;
-    color: #5b21b6;
-    line-height: 1.5;
-  }
+  .reforma-footnote { background: #f5f3ff; border-top: 1px solid #c4b5fd; padding: 10px 18px; font-size: 10.5px; color: #5b21b6; line-height: 1.5; }
   .reforma-footnote strong { color: #4c1d95; }
 
-  @media (max-width: 700px) {
-    .reforma-cols { grid-template-columns: 1fr; }
-  }
-
   .actions { display: flex; gap: 8px; margin-top: 14px; }
-  .btn {
-    flex: 1;
-    padding: 9px 14px;
-    border: none;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-  }
+  .btn { flex: 1; padding: 9px 14px; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
   .btn-primary { background: #1B2E5E; color: #fff; }
-  .btn-secondary { background: #fff; color: #1B2E5E; border: 1.5px solid #1B2E5E; }
   .btn-gold { background: #D4A04A; color: #fff; }
-  .btn-gold:hover { background: #B8862F; }
   .btn-whatsapp { background: #25D366; color: #fff; }
-  .btn-whatsapp:hover { background: #1ea952; }
 
-  .footer {
-    background: #f8fafc;
-    padding: 12px 32px;
-    text-align: center;
-    font-size: 10px;
-    color: #94a3b8;
-    border-top: 1px solid #e2e8f0;
-  }
+  .footer { background: #f8fafc; padding: 12px 32px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
   .footer strong { color: #1B2E5E; }
 
-  @media (max-width: 900px) {
-    .body { grid-template-columns: 1fr; }
-    .inputs-section { border-right: none; border-bottom: 1px solid #e2e8f0; }
-  }
+  @media (max-width: 900px) { .body { grid-template-columns: 1fr; } .inputs-section { border-right: none; border-bottom: 1px solid #e2e8f0; } }
+  @media (max-width: 700px) { .reforma-cols { grid-template-columns: 1fr; } }
 
-  /* ====== LOGIN ====== */
-  .login-overlay {
-    position: fixed; inset: 0;
-    background: linear-gradient(135deg, #1B2E5E 0%, #0d1b3e 100%);
-    z-index: 99999;
-    display: flex; align-items: center; justify-content: center;
-    padding: 20px;
-  }
-  .login-box {
-    background: #fff; border-radius: 16px; padding: 40px 36px;
-    width: 100%; max-width: 400px;
-    box-shadow: 0 24px 64px rgba(0,0,0,0.4);
-  }
+  /* ===== LOGIN ===== */
+  .login-overlay { position: fixed; inset: 0; background: linear-gradient(135deg, #1B2E5E 0%, #0d1b3e 100%); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .login-box { background: #fff; border-radius: 16px; padding: 40px 36px; width: 100%; max-width: 400px; box-shadow: 0 24px 64px rgba(0,0,0,0.4); }
   .login-logo { text-align: center; margin-bottom: 28px; }
   .login-logo img { height: 72px; width: auto; }
   .login-logo .login-title { font-size: 20px; font-weight: 700; color: #1B2E5E; margin-top: 10px; }
   .login-logo .login-sub { font-size: 12px; color: #64748b; margin-top: 3px; }
-  .login-btn {
-    width: 100%; padding: 13px;
-    background: linear-gradient(135deg, #1B2E5E 0%, #3A5A8C 100%);
-    color: #fff; border: none; border-radius: 8px;
-    font-size: 14px; font-weight: 600; cursor: pointer;
-    margin-top: 4px; transition: opacity 0.2s;
-    border-bottom: 3px solid #D4A04A;
-  }
-  .login-btn:hover { opacity: 0.9; }
+  .login-btn { width: 100%; padding: 13px; background: linear-gradient(135deg, #1B2E5E 0%, #3A5A8C 100%); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 4px; border-bottom: 3px solid #D4A04A; }
   .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .login-erro {
-    display: none; margin-top: 12px; padding: 10px 12px;
-    background: #fee2e2; border-left: 3px solid #dc2626;
-    border-radius: 4px; font-size: 12px; color: #7f1d1d; line-height: 1.4;
-  }
+  .login-erro { display: none; margin-top: 12px; padding: 10px 12px; background: #fee2e2; border-left: 3px solid #dc2626; border-radius: 4px; font-size: 12px; color: #7f1d1d; line-height: 1.4; }
   .login-lembrar { display: flex; align-items: center; gap: 8px; margin: 12px 0 16px; }
   .login-lembrar input { width: auto; margin: 0; cursor: pointer; }
   .login-lembrar label { font-size: 12px; color: #475569; cursor: pointer; margin: 0; font-weight: 400; }
   .user-bar { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 11px; opacity: 0.9; flex-wrap: wrap; }
   .user-badge { background: #D4A04A; color: #fff; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
-  .logout-btn {
-    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
-    color: #fff; padding: 3px 10px; border-radius: 4px;
-    font-size: 10px; cursor: pointer;
-  }
-  .logout-btn:hover { background: rgba(255,255,255,0.25); }
-  /* ====== FIM LOGIN ====== */
+  .logout-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 3px 10px; border-radius: 4px; font-size: 10px; cursor: pointer; }
 </style>
 </head>
 <body>
 
-  <!-- ====== TELA DE LOGIN ====== -->
+  <!-- ===== TELA DE LOGIN ===== -->
   <div class="login-overlay" id="login-overlay">
     <div class="login-box">
       <div class="login-logo">
@@ -515,37 +185,30 @@
         <div class="login-title">Calculadora Fiscal</div>
         <div class="login-sub">Multi-CNPJ · Citrus Juice</div>
       </div>
-
       <div class="input-group">
         <label>Usuário</label>
         <input type="text" id="login-usuario" placeholder="Digite seu usuário" autocomplete="username">
       </div>
-
       <div class="input-group">
         <label>Senha</label>
         <input type="password" id="login-senha" placeholder="••••••••" autocomplete="current-password">
       </div>
-
       <div class="login-lembrar">
         <input type="checkbox" id="login-lembrar">
         <label for="login-lembrar">Lembrar meu acesso neste dispositivo</label>
       </div>
-
       <button class="login-btn" id="btn-entrar">Entrar</button>
-
       <div class="login-erro" id="login-erro"></div>
-
       <div style="margin-top:24px;text-align:center;font-size:10px;color:#94a3b8;">
         Elaborado por <strong style="color:#1B2E5E;">Priscila</strong> · Citrus Juice LTDA
       </div>
     </div>
   </div>
-  <!-- ====== FIM LOGIN ====== -->
 
   <div class="container">
     <div class="header">
       <h1>Calculadora Fiscal Multi-CNPJ — Citrus Juice</h1>
-      <div class="subtitle">Precificação parametrizada por empresa, NCM e destino · Net Back & Gross-Up bidirecional</div>
+      <div class="subtitle">Precificação parametrizada por empresa, NCM e destino</div>
     </div>
 
     <div class="config-bar">
@@ -560,20 +223,18 @@
 
     <div class="ptax-bar" id="ptax-bar-container">
       <span class="ptax-title">💱 Cotação USD → BRL</span>
-      <span id="ptax-status-msg" style="font-size:11px;color:#0369a1;">Clique em "Buscar PTAX" pra cotação automática do dia útil anterior.</span>
-      <button id="btn-buscar-ptax" type="button" style="background:#0369a1;color:#fff;border:none;padding:6px 12px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;">🔄 Buscar PTAX</button>
+      <span id="ptax-status-msg" style="font-size:11px;color:#0369a1;">Buscando PTAX...</span>
+      <button id="btn-buscar-ptax" type="button" style="background:#0369a1;color:#fff;border:none;padding:6px 12px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;">🔄 Atualizar PTAX</button>
       <a href="https://www.bcb.gov.br/estabilidadefinanceira/historicocotacoes" target="_blank" rel="noopener" style="font-size:10px;color:#0369a1;text-decoration:underline;margin-left:8px;">Conferir no BCB</a>
-      <span id="api-status" style="font-size:11px;margin-left:4px;display:none;"></span>
     </div>
 
     <div class="scenario-banner">
-      <strong>Regime vigente em 2026:</strong> PIS/COFINS, ICMS e IPI conforme legislação atual · Tese do Século aplicada · LC 224/2025 vigente para Campo Rico desde 01/04/2026
+      <strong>Regime vigente em 2026:</strong> PIS/COFINS, ICMS e IPI conforme legislação atual · Tese do Século aplicada
     </div>
 
     <div class="body">
       <div class="inputs-section">
         <div class="section-title">1. Empresa & Operação</div>
-
         <div class="input-group">
           <label>Empresa (CNPJ)</label>
           <select id="sel-empresa">
@@ -583,7 +244,6 @@
             <option value="camporico">Agroindustrial Campo Rico LTDA</option>
           </select>
         </div>
-
         <div class="input-group">
           <label>Tipo de Operação</label>
           <select id="sel-operacao">
@@ -592,48 +252,31 @@
             <option value="export">Exportação (imune)</option>
           </select>
         </div>
-
         <div class="input-group" id="grp-estado" style="display:none">
           <label>Estado de Destino</label>
           <select id="sel-estado">
             <optgroup label="Sul/Sudeste (12%)">
-              <option value="MG">Minas Gerais</option>
-              <option value="RJ">Rio de Janeiro</option>
-              <option value="RS">Rio Grande do Sul</option>
-              <option value="PR">Paraná</option>
+              <option value="MG">Minas Gerais</option><option value="RJ">Rio de Janeiro</option>
+              <option value="RS">Rio Grande do Sul</option><option value="PR">Paraná</option>
               <option value="SC">Santa Catarina</option>
             </optgroup>
             <optgroup label="Norte/Nordeste/Centro-Oeste/ES (7%)">
-              <option value="AC">Acre</option>
-              <option value="AL">Alagoas</option>
-              <option value="AM">Amazonas</option>
-              <option value="AP">Amapá</option>
-              <option value="BA">Bahia</option>
-              <option value="CE">Ceará</option>
-              <option value="DF">Distrito Federal</option>
-              <option value="ES">Espírito Santo</option>
-              <option value="GO">Goiás</option>
-              <option value="MA">Maranhão</option>
-              <option value="MT">Mato Grosso</option>
-              <option value="MS">Mato Grosso do Sul</option>
-              <option value="PA">Pará</option>
-              <option value="PB">Paraíba</option>
-              <option value="PE">Pernambuco</option>
-              <option value="PI">Piauí</option>
-              <option value="RN">Rio Grande do Norte</option>
-              <option value="RO">Rondônia</option>
-              <option value="RR">Roraima</option>
-              <option value="SE">Sergipe</option>
+              <option value="AC">Acre</option><option value="AL">Alagoas</option>
+              <option value="AM">Amazonas</option><option value="AP">Amapá</option>
+              <option value="BA">Bahia</option><option value="CE">Ceará</option>
+              <option value="DF">Distrito Federal</option><option value="ES">Espírito Santo</option>
+              <option value="GO">Goiás</option><option value="MA">Maranhão</option>
+              <option value="MT">Mato Grosso</option><option value="MS">Mato Grosso do Sul</option>
+              <option value="PA">Pará</option><option value="PB">Paraíba</option>
+              <option value="PE">Pernambuco</option><option value="PI">Piauí</option>
+              <option value="RN">Rio Grande do Norte</option><option value="RO">Rondônia</option>
+              <option value="RR">Roraima</option><option value="SE">Sergipe</option>
               <option value="TO">Tocantins</option>
             </optgroup>
           </select>
         </div>
-
         <div class="input-group" id="grp-destino" style="display:none">
-          <label>
-            Destino do produto <span class="hint">(Reforma Tributária)</span>
-            <button type="button" id="btn-info-anexo9" title="Ver Anexo IX item 7" style="background:#7c3aed;color:#fff;border:none;width:18px;height:18px;border-radius:50%;font-size:11px;font-weight:700;cursor:pointer;margin-left:4px;line-height:1;">ⓘ</button>
-          </label>
+          <label>Destino do produto <span class="hint">(Reforma Tributária)</span></label>
           <select id="sel-destino">
             <option value="fertilizante">Fabricação de fertilizante (Anexo IX — 60%)</option>
             <option value="industrial">Indústria geral — perfumaria, alimentos (padrão)</option>
@@ -641,19 +284,16 @@
         </div>
 
         <div class="section-title">2. Produto</div>
-
         <div class="input-group" style="position:relative;">
           <label>Buscar Produto <span class="hint">(digite código ou descrição)</span></label>
-          <input type="text" id="busca-produto" placeholder="Ex: laranja concentrado, CJ01, óleo limão..." autocomplete="off">
+          <input type="text" id="busca-produto" placeholder="Ex: laranja, CJ01, óleo limão..." autocomplete="off">
           <div id="busca-resultados" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #1B2E5E;border-top:none;border-radius:0 0 6px 6px;max-height:280px;overflow-y:auto;z-index:100;box-shadow:0 6px 16px rgba(27,46,94,0.15);"></div>
         </div>
-
         <div id="produto-selecionado" style="display:none;background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border:1.5px solid #0369a1;border-radius:6px;padding:10px 12px;margin-bottom:12px;">
           <div style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">✓ Produto selecionado</div>
           <div style="font-size:12px;font-weight:600;color:#1a2332;" id="prod-sel-desc">—</div>
           <div style="font-size:11px;color:#475569;margin-top:3px;" id="prod-sel-meta">—</div>
         </div>
-
         <select id="sel-familia" style="display:none">
           <option value="suco-laranja">Suco de Laranja</option>
           <option value="suco-limao">Suco de Limão</option>
@@ -668,7 +308,6 @@
         <select id="sel-ncm" style="display:none"></select>
 
         <div class="section-title">3. Preço & Quantidade</div>
-
         <div class="input-group">
           <label id="lbl-preco">Preço de Venda <span class="hint">(bruto, em dólar)</span></label>
           <div class="input-wrapper">
@@ -677,7 +316,6 @@
             <input type="number" id="precoUSD" value="2.50" step="0.01" class="has-prefix has-suffix">
           </div>
         </div>
-
         <div class="input-row">
           <div class="input-group">
             <label>Unidade</label>
@@ -694,7 +332,6 @@
             </div>
           </div>
         </div>
-
         <div class="input-group">
           <label>Quantidade <span class="hint">(opcional)</span></label>
           <div class="input-wrapper">
@@ -703,20 +340,17 @@
           </div>
         </div>
 
-        <div class="section-title">4. Dados da Cotação <span style="font-size:9px;font-weight:400;color:#94a3b8;text-transform:none;letter-spacing:0;">(opcional — para gerar PDF)</span></div>
-
+        <div class="section-title">4. Dados da Cotação</div>
         <div class="input-group">
-          <label>Vendedor responsável <span class="hint">(quem está cotando)</span></label>
+          <label>Vendedor responsável</label>
           <select id="sel-vendedor">
             <option value="">— Selecione o vendedor —</option>
           </select>
         </div>
-
         <div class="input-group">
           <label>Razão Social do Cliente</label>
           <input type="text" id="cli-razao" placeholder="Ex: Indústria XYZ Ltda">
         </div>
-
         <div class="input-row">
           <div class="input-group">
             <label>CNPJ do Cliente</label>
@@ -727,7 +361,6 @@
             <input type="text" id="cli-contato" placeholder="Nome do comprador">
           </div>
         </div>
-
         <div class="input-row">
           <div class="input-group">
             <label>E-mail do Cliente</label>
@@ -740,14 +373,13 @@
         </div>
 
         <div class="section-title">5. Condições Comerciais</div>
-
         <div class="input-row">
           <div class="input-group">
             <label>Incoterm</label>
             <select id="cot-incoterm">
               <option value="FOB">FOB — Free On Board</option>
               <option value="CIF">CIF — Cost, Insurance, Freight</option>
-              <option value="EXW">EXW — Ex Works (na fábrica)</option>
+              <option value="EXW">EXW — Ex Works</option>
               <option value="FCA">FCA — Free Carrier</option>
               <option value="CFR">CFR — Cost and Freight</option>
               <option value="DAP">DAP — Delivered At Place</option>
@@ -767,7 +399,6 @@
             </select>
           </div>
         </div>
-
         <div class="input-row">
           <div class="input-group">
             <label>Prazo de Entrega</label>
@@ -778,16 +409,14 @@
             <input type="date" id="cot-validade">
           </div>
         </div>
-
         <div class="input-group">
-          <label>Observações Adicionais <span class="hint">(opcional)</span></label>
-          <textarea id="cot-obs" rows="2" placeholder="Ex: Embalagem padrão, tributos inclusos no preço, etc." style="width:100%;padding:9px 11px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;"></textarea>
+          <label>Observações</label>
+          <textarea id="cot-obs" rows="2" style="width:100%;padding:9px 11px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;"></textarea>
         </div>
       </div>
 
       <div class="outputs-section">
         <div id="alerts-area"></div>
-
         <div class="params-applied">
           <div class="params-title">⚙️ Parâmetros fiscais aplicados</div>
           <div class="param-line"><span>Empresa / CFOP:</span><span class="val" id="p-empresa">—</span></div>
@@ -797,7 +426,6 @@
         </div>
 
         <div class="section-title" id="result-title">Net Back Unitário</div>
-
         <div class="results-grid">
           <div class="result-card highlight-usd">
             <span class="label" id="lbl-principal-usd">🎯 Net Back USD/kg</span>
@@ -811,30 +439,12 @@
 
         <div class="breakdown">
           <div class="breakdown-title">Composição por unidade</div>
-          <div class="breakdown-row">
-            <span id="lbl-comp-1">Preço bruto USD/kg</span>
-            <span class="val" id="out-precoUSD">USD 0.0000</span>
-          </div>
-          <div class="breakdown-row">
-            <span>↳ Preço bruto BRL/kg</span>
-            <span class="val" id="out-precoBRL">R$ 0,00</span>
-          </div>
-          <div class="breakdown-row" id="row-ipi" style="display:none">
-            <span>(+) IPI</span>
-            <span class="val pos" id="out-ipi">+R$ 0,00</span>
-          </div>
-          <div class="breakdown-row" id="row-icms">
-            <span>(−) ICMS</span>
-            <span class="val neg" id="out-icms">−R$ 0,00</span>
-          </div>
-          <div class="breakdown-row" id="row-pc">
-            <span>(−) PIS+COFINS</span>
-            <span class="val neg" id="out-pc">−R$ 0,00</span>
-          </div>
-          <div class="breakdown-row bold">
-            <span id="lbl-comp-final">= Líquido BRL/kg</span>
-            <span class="val" id="out-liq">R$ 0,00</span>
-          </div>
+          <div class="breakdown-row"><span id="lbl-comp-1">Preço bruto USD/kg</span><span class="val" id="out-precoUSD">USD 0.0000</span></div>
+          <div class="breakdown-row"><span>↳ Preço bruto BRL/kg</span><span class="val" id="out-precoBRL">R$ 0,00</span></div>
+          <div class="breakdown-row" id="row-ipi" style="display:none"><span>(+) IPI</span><span class="val pos" id="out-ipi">+R$ 0,00</span></div>
+          <div class="breakdown-row" id="row-icms"><span>(−) ICMS</span><span class="val neg" id="out-icms">−R$ 0,00</span></div>
+          <div class="breakdown-row" id="row-pc"><span>(−) PIS+COFINS</span><span class="val neg" id="out-pc">−R$ 0,00</span></div>
+          <div class="breakdown-row bold"><span id="lbl-comp-final">= Líquido BRL/kg</span><span class="val" id="out-liq">R$ 0,00</span></div>
         </div>
 
         <div class="breakdown">
@@ -859,23 +469,18 @@
           <div class="reforma-header">
             <div>
               <h3>📊 Comparativo Reforma Tributária</h3>
-              <div class="reforma-subtitle">Impacto LC 214/2025 · CBS substitui PIS/COFINS · IBS substitui ICMS/ISS</div>
+              <div class="reforma-subtitle">LC 214/2025 · CBS substitui PIS/COFINS · IBS substitui ICMS/ISS</div>
             </div>
             <div id="reforma-badge-area"></div>
           </div>
-
           <div class="reforma-config">
             <label>CBS + IBS total:</label>
             <input type="number" id="cbs-ibs-total" value="26.5" step="0.1" min="0" max="40">
-            <span class="config-hint">% (estimativa MF/IFI · edite se a regulamentação mudar)</span>
+            <span class="config-hint">% (estimativa MF/IFI)</span>
           </div>
-
           <div class="reforma-cols">
             <div class="reforma-col atual">
-              <div class="reforma-col-header">
-                <span class="ano">2026</span>
-                <span class="legenda">Regime atual</span>
-              </div>
+              <div class="reforma-col-header"><span class="ano">2026</span><span class="legenda">Regime atual</span></div>
               <div class="reforma-row ativo"><span>ICMS</span><span class="val" id="r26-icms">—</span></div>
               <div class="reforma-row ativo"><span>PIS+COFINS</span><span class="val" id="r26-pc">—</span></div>
               <div class="reforma-row ativo"><span>IPI</span><span class="val" id="r26-ipi">—</span></div>
@@ -884,12 +489,8 @@
               <div class="reforma-row carga divider"><span>Carga total</span><span class="val" id="r26-carga">—</span></div>
               <div class="reforma-row liq"><span>Líquido</span><span class="val" id="r26-liq">—</span></div>
             </div>
-
             <div class="reforma-col transicao">
-              <div class="reforma-col-header">
-                <span class="ano">2027</span>
-                <span class="legenda">Transição</span>
-              </div>
+              <div class="reforma-col-header"><span class="ano">2027</span><span class="legenda">Transição</span></div>
               <div class="reforma-row ativo"><span>ICMS</span><span class="val" id="r27-icms">—</span></div>
               <div class="reforma-row extinto"><span>PIS+COFINS</span><span class="val">extinto</span></div>
               <div class="reforma-row ativo"><span>IPI</span><span class="val" id="r27-ipi">—</span></div>
@@ -898,12 +499,8 @@
               <div class="reforma-row carga divider"><span>Carga total</span><span class="val" id="r27-carga">—</span></div>
               <div class="reforma-row liq"><span>Líquido</span><span class="val" id="r27-liq">—</span></div>
             </div>
-
             <div class="reforma-col pleno">
-              <div class="reforma-col-header">
-                <span class="ano">2033</span>
-                <span class="legenda">Sistema pleno</span>
-              </div>
+              <div class="reforma-col-header"><span class="ano">2033</span><span class="legenda">Sistema pleno</span></div>
               <div class="reforma-row extinto"><span>ICMS</span><span class="val">extinto</span></div>
               <div class="reforma-row extinto"><span>PIS+COFINS</span><span class="val">extinto</span></div>
               <div class="reforma-row extinto"><span>IPI</span><span class="val">extinto</span></div>
@@ -913,9 +510,8 @@
               <div class="reforma-row liq"><span>Líquido</span><span class="val" id="r33-liq">—</span></div>
             </div>
           </div>
-
           <div class="reforma-footnote" id="reforma-footnote">
-            <strong>Base legal:</strong> LC 214/2025 · EC 132/2023 · Estimativas de alíquota MF/IFI sujeitas à definição pelo Senado.
+            <strong>Base legal:</strong> LC 214/2025 · EC 132/2023
           </div>
         </div>
 
@@ -928,116 +524,47 @@
     </div>
 
     <div class="footer">
-      Elaborado por <strong>Priscila</strong> — Citrus Juice LTDA · Coordenação Contábil, Fiscal, Faturamento, Controladoria e DP/RH
+      Elaborado por <strong>Priscila</strong> — Citrus Juice LTDA
     </div>
   </div>
 
 <script>
 'use strict';
 
-// ============================================================
-// DADOS FISCAIS
-// ============================================================
-
+// ===== DADOS FISCAIS =====
 const EMPRESAS = {
-  'citrus':      { nome: 'Citrus Juice LTDA',         pcInterno: 0.0925,  ipiMode: 'industrial',   cfopVenda: '5101/6101/7101' },
-  'kiki':        { nome: 'Sucos Kiki LTDA',           pcInterno: 0.0925,  ipiMode: 'industrial',   cfopVenda: '5101/6101/7101' },
-  'commodities': { nome: 'Citrus Commodities SA',     pcInterno: 0.0925,  ipiMode: 'comercial',    cfopVenda: '5102/6102/7102' },
+  'citrus':      { nome: 'Citrus Juice LTDA', pcInterno: 0.0925, ipiMode: 'industrial', cfopVenda: '5101/6101/7101' },
+  'kiki':        { nome: 'Sucos Kiki LTDA', pcInterno: 0.0925, ipiMode: 'industrial', cfopVenda: '5101/6101/7101' },
+  'commodities': { nome: 'Citrus Commodities SA', pcInterno: 0.0925, ipiMode: 'comercial', cfopVenda: '5102/6102/7102' },
   'camporico':   { nome: 'Agroindustrial Campo Rico', pcInterno: 0.00925, ipiMode: 'pjpe-suspenso', cfopVenda: '5101/6101/7101' }
 };
 
 const FAMILIAS = {
-  'suco-laranja': {
-    label: 'Suco de Laranja',
-    ncms: [{ code: '2009.11.00', desc: 'Congelado' }, { code: '2009.19.00', desc: 'Não congelado' }],
-    icmsInternoSP: 0.133, icmsBase: 'art61', ipi: 0, ipiNT: true,
-    legal: 'Art. 61 An.II RICMS/SP — carga 13,3% interna SP'
-  },
-  'suco-limao': {
-    label: 'Suco de Limão',
-    ncms: [{ code: '2009.31.00', desc: 'Outros citros Brix ≤ 20' }, { code: '2009.39.00', desc: 'Outros citros Brix > 20' }],
-    icmsInternoSP: 0.18, icmsBase: 'padrao', ipi: 0, ipiNT: true,
-    legal: 'Art. 52, I RICMS/SP — 18% padrão'
-  },
-  'suco-misto': {
-    label: 'Suco Misto / Concentrado p/ Refresco',
-    ncms: [{ code: '2009.90.00', desc: 'Misturas / concentrado p/ refresco' }],
-    icmsInternoSP: 0.18, icmsBase: 'padrao', ipi: 0, ipiNT: true,
-    legal: 'Art. 52, I RICMS/SP · RC 31857/2025'
-  },
-  'oleo-laranja': {
-    label: 'Óleo Essencial de Laranja',
-    ncms: [{ code: '3301.12.10', desc: 'Petit grain' }, { code: '3301.12.90', desc: 'Outros' }],
-    icmsInternoSP: 0.18, icmsBase: 'padrao', ipi: 0.0325, ipiNT: false,
-    legal: 'TIPI Cap. 33 — IPI 3,25% · ICMS 18% padrão'
-  },
-  'oleo-limao': {
-    label: 'Óleo Essencial de Limão',
-    ncms: [{ code: '3301.13.00', desc: 'Óleo essencial de limão' }, { code: '3301.19.10', desc: 'Óleo essencial de lima' }, { code: '3301.12.90', desc: 'Terpeno de limão' }],
-    icmsInternoSP: 0.18, icmsBase: 'padrao', ipi: 0.0325, ipiNT: false,
-    legal: 'TIPI Cap. 33 — IPI 3,25% · ICMS 18% padrão'
-  },
-  'oleo-lima': {
-    label: 'Óleo Essencial de Lima',
-    ncms: [{ code: '3301.19.10', desc: 'Óleo essencial de lima' }],
-    icmsInternoSP: 0.18, icmsBase: 'padrao', ipi: 0.0325, ipiNT: false,
-    legal: 'TIPI Cap. 33 — IPI 3,25% · ICMS 18% padrão'
-  },
-  'oleo-outros': {
-    label: 'Outros Óleos Cítricos',
-    ncms: [{ code: '3301.19.90', desc: 'Outros óleos cítricos' }],
-    icmsInternoSP: 0.18, icmsBase: 'padrao', ipi: 0.0325, ipiNT: false,
-    legal: 'TIPI Cap. 33 — IPI 3,25% · ICMS 18% padrão'
-  },
-  'terpenico': {
-    label: 'Subproduto Terpênico',
-    ncms: [{ code: '3301.90.20', desc: 'Subprodutos da desterpenação' }],
-    icmsInternoSP: 0.18, icmsBase: 'padrao', ipi: 0.0325, ipiNT: false,
-    legal: 'TIPI Cap. 33 — IPI 3,25% · ICMS 18% padrão'
-  },
-  'limoneno': {
-    label: 'D-Limoneno (Hidrocarboneto)',
-    ncms: [{ code: '2902.19.10', desc: 'D-Limoneno isolado' }],
-    icmsInternoSP: 0.18, icmsBase: 'padrao', ipi: 0, ipiNT: false,
-    legal: 'Cap. 29 TIPI — Hidrocarboneto cíclico · ICMS 18% padrão · Sem IPI'
-  }
+  'suco-laranja': { label: 'Suco de Laranja', ncms: [{code:'2009.11.00',desc:'Congelado'},{code:'2009.19.00',desc:'Não congelado'}], icmsInternoSP: 0.133, icmsBase: 'art61', ipi: 0, ipiNT: true },
+  'suco-limao':   { label: 'Suco de Limão', ncms: [{code:'2009.31.00',desc:'Brix ≤ 20'},{code:'2009.39.00',desc:'Brix > 20'}], icmsInternoSP: 0.18, icmsBase: 'padrao', ipi: 0, ipiNT: true },
+  'suco-misto':   { label: 'Suco Misto', ncms: [{code:'2009.90.00',desc:'Misturas'}], icmsInternoSP: 0.18, icmsBase: 'padrao', ipi: 0, ipiNT: true },
+  'oleo-laranja': { label: 'Óleo Essencial de Laranja', ncms: [{code:'3301.12.10',desc:'Petit grain'},{code:'3301.12.90',desc:'Outros'}], icmsInternoSP: 0.18, icmsBase: 'padrao', ipi: 0.0325, ipiNT: false },
+  'oleo-limao':   { label: 'Óleo Essencial de Limão', ncms: [{code:'3301.13.00',desc:'Limão'},{code:'3301.19.10',desc:'Lima'},{code:'3301.12.90',desc:'Terpeno'}], icmsInternoSP: 0.18, icmsBase: 'padrao', ipi: 0.0325, ipiNT: false },
+  'oleo-lima':    { label: 'Óleo Essencial de Lima', ncms: [{code:'3301.19.10',desc:'Lima'}], icmsInternoSP: 0.18, icmsBase: 'padrao', ipi: 0.0325, ipiNT: false },
+  'oleo-outros':  { label: 'Outros Óleos Cítricos', ncms: [{code:'3301.19.90',desc:'Outros'}], icmsInternoSP: 0.18, icmsBase: 'padrao', ipi: 0.0325, ipiNT: false },
+  'terpenico':    { label: 'Subproduto Terpênico', ncms: [{code:'3301.90.20',desc:'Desterpenação'}], icmsInternoSP: 0.18, icmsBase: 'padrao', ipi: 0.0325, ipiNT: false },
+  'limoneno':     { label: 'D-Limoneno', ncms: [{code:'2902.19.10',desc:'D-Limoneno'}], icmsInternoSP: 0.18, icmsBase: 'padrao', ipi: 0, ipiNT: false }
 };
 
 const ICMS_INTER = { 'sul-sudeste': 0.12, 'demais': 0.07 };
-const ESTADO_REGIAO = {
-  'MG':'sul-sudeste','RJ':'sul-sudeste','RS':'sul-sudeste','PR':'sul-sudeste','SC':'sul-sudeste',
-  'AC':'demais','AL':'demais','AM':'demais','AP':'demais','BA':'demais','CE':'demais','DF':'demais',
-  'ES':'demais','GO':'demais','MA':'demais','MT':'demais','MS':'demais','PA':'demais','PB':'demais',
-  'PE':'demais','PI':'demais','RN':'demais','RO':'demais','RR':'demais','SE':'demais','TO':'demais'
-};
-
-// ============================================================
-// ESTADO GLOBAL
-// ============================================================
+const ESTADO_REGIAO = { 'MG':'sul-sudeste','RJ':'sul-sudeste','RS':'sul-sudeste','PR':'sul-sudeste','SC':'sul-sudeste','AC':'demais','AL':'demais','AM':'demais','AP':'demais','BA':'demais','CE':'demais','DF':'demais','ES':'demais','GO':'demais','MA':'demais','MT':'demais','MS':'demais','PA':'demais','PB':'demais','PE':'demais','PI':'demais','RN':'demais','RO':'demais','RR':'demais','SE':'demais','TO':'demais' };
 
 let modo = 'bruto-liq';
 let unidade = 'kg';
 
-// ============================================================
-// CACHE DE NUMERAÇÃO — COMPARTILHADO ENTRE PDF E WHATSAPP
-// ============================================================
-// Garante que PDF e WhatsApp usem SEMPRE o mesmo número
-// para a mesma cotação. O cache é invalidado automaticamente
-// quando o usuário muda cliente, produto, preço ou quantidade.
-
-// Número compartilhado entre PDF e WhatsApp para a mesma cotação.
-// Regra simples: se já tem número guardado, usa ele.
-// Só gera novo número quando o usuário muda cliente, produto, preço ou quantidade.
+// ===== CACHE DE NUMERAÇÃO COMPARTILHADA =====
 let _numeroCotacaoAtual = null;
 
 async function obterNumeroCotacao(dados) {
-  // Já tem número guardado? Reutiliza sem chamar a API de novo.
   if (_numeroCotacaoAtual) {
     mostrarToast('♻️ Mesmo número reutilizado: ' + _numeroCotacaoAtual);
     return _numeroCotacaoAtual;
   }
-
-  // Ainda não tem número — chama a API para gerar um novo.
   mostrarToast('⏳ Registrando cotação...');
   try {
     const resp = await registrarECobrarNumero(dados);
@@ -1045,72 +572,68 @@ async function obterNumeroCotacao(dados) {
     mostrarToast('✅ Cotação ' + _numeroCotacaoAtual + ' registrada!');
     return _numeroCotacaoAtual;
   } catch (err) {
-    console.error('Erro ao registrar cotação:', err);
-    const ano = new Date().getFullYear();
-    _numeroCotacaoAtual = 'COT-' + ano + '-LOCAL-' + Date.now().toString().slice(-4);
-    mostrarToast('⚠️ API indisponível · número local: ' + _numeroCotacaoAtual);
+    console.error('Erro:', err);
+    _numeroCotacaoAtual = 'COT-' + new Date().getFullYear() + '-LOCAL-' + Date.now().toString().slice(-4);
+    mostrarToast('⚠️ API indisponível · ' + _numeroCotacaoAtual);
     return _numeroCotacaoAtual;
   }
 }
 
-// Limpa o número guardado — chamado quando o usuário muda qualquer dado da cotação
-function invalidarNumeroCotacao() {
-  _numeroCotacaoAtual = null;
+function invalidarNumeroCotacao() { _numeroCotacaoAtual = null; }
+
+// ===== LOGOS BASE64 (PRÉ-CARREGAMENTO) =====
+const logosBase64 = {};
+
+async function precarregarLogos() {
+  for (const key of Object.keys(EMPRESAS_CADASTRO)) {
+    const url = EMPRESAS_CADASTRO[key].logo;
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const blob = await resp.blob();
+      logosBase64[key] = await new Promise(function(resolve) {
+        const reader = new FileReader();
+        reader.onloadend = function() { resolve(reader.result); };
+        reader.readAsDataURL(blob);
+      });
+    } catch(e) {
+      logosBase64[key] = null;
+      console.warn('Logo nao carregada (' + key + '):', e.message);
+    }
+  }
 }
 
-// ============================================================
-// HELPERS DE FORMATAÇÃO
-// ============================================================
-
+// ===== HELPERS =====
 function fmtBRL(v) { return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function fmtUSD(v) { return 'USD ' + v.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 }); }
 function fmtUSD2(v) { return 'USD ' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function fmtPct(v) { return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%'; }
 function fmtFator(v) { return v.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 }); }
 
-// ============================================================
-// LÓGICA FISCAL
-// ============================================================
-
+// ===== CÁLCULO FISCAL =====
 function obterParametros() {
   const empresa = EMPRESAS[document.getElementById('sel-empresa').value];
   const familia = FAMILIAS[document.getElementById('sel-familia').value];
   const operacao = document.getElementById('sel-operacao').value;
   const estado = document.getElementById('sel-estado').value;
-
-  let icms = 0, pc = 0, ipi = 0;
-  let icmsLabel = '', pcLabel = '', ipiLabel = '';
-
+  let icms = 0, pc = 0, ipi = 0, icmsLabel = '', pcLabel = '', ipiLabel = '';
   if (operacao === 'export') {
-    icmsLabel = 'Imune (exportação)';
-    pcLabel = 'Imune (exportação)';
-    ipiLabel = 'Imune (exportação)';
+    icmsLabel = 'Imune (exportação)'; pcLabel = 'Imune (exportação)'; ipiLabel = 'Imune (exportação)';
   } else {
     if (operacao === 'interno-sp') {
       icms = familia.icmsInternoSP;
-      icmsLabel = familia.icmsBase === 'art61'
-        ? `${(icms*100).toFixed(1).replace('.',',')}% (Art. 61 An.II)`
-        : `${(icms*100).toFixed(2).replace('.',',')}% (padrão SP)`;
+      icmsLabel = familia.icmsBase === 'art61' ? (icms*100).toFixed(1).replace('.',',') + '% (Art. 61 An.II)' : (icms*100).toFixed(2).replace('.',',') + '% (padrão SP)';
     } else {
       icms = ICMS_INTER[ESTADO_REGIAO[estado]];
-      icmsLabel = `${(icms*100).toFixed(0)}% interestadual (${estado})`;
+      icmsLabel = (icms*100).toFixed(0) + '% interestadual (' + estado + ')';
     }
     pc = empresa.pcInterno;
-    pcLabel = empresa.ipiMode === 'pjpe-suspenso'
-      ? `${(pc*100).toFixed(3).replace('.',',')}% (PJPE — LC 224/2025)`
-      : `${(pc*100).toFixed(2).replace('.',',')}% (não-cumulativo)`;
-    if (familia.ipiNT) {
-      ipiLabel = 'NT (TIPI)';
-    } else if (empresa.ipiMode === 'comercial') {
-      ipiLabel = `0% (CFOP ${empresa.cfopVenda} sem destaque)`;
-    } else if (empresa.ipiMode === 'pjpe-suspenso') {
-      ipiLabel = '0% (suspenso PJPE)';
-    } else {
-      ipi = familia.ipi;
-      ipiLabel = `${(ipi*100).toFixed(2).replace('.',',')}% (Industrial)`;
-    }
+    pcLabel = empresa.ipiMode === 'pjpe-suspenso' ? (pc*100).toFixed(3).replace('.',',') + '% (PJPE)' : (pc*100).toFixed(2).replace('.',',') + '% (não-cumulativo)';
+    if (familia.ipiNT) ipiLabel = 'NT (TIPI)';
+    else if (empresa.ipiMode === 'comercial') ipiLabel = '0% (CFOP ' + empresa.cfopVenda + ' sem destaque)';
+    else if (empresa.ipiMode === 'pjpe-suspenso') ipiLabel = '0% (suspenso PJPE)';
+    else { ipi = familia.ipi; ipiLabel = (ipi*100).toFixed(2).replace('.',',') + '% (Industrial)'; }
   }
-
   return { empresa, familia, operacao, estado, icms, pc, ipi, icmsLabel, pcLabel, ipiLabel };
 }
 
@@ -1119,12 +642,9 @@ function calcular() {
   const precoInput = parseFloat(document.getElementById('precoUSD').value) || 0;
   const cotacao = parseFloat(document.getElementById('cotacao').value) || 0;
   const qtd = parseFloat(document.getElementById('quantidade').value) || 0;
-
   const divisor = 1 - p.icms - (1 - p.icms) * p.pc;
   const fator = divisor > 0 ? 1 / divisor : 0;
-
   let precoBrutoBRL, precoLiquidoBRL, precoBrutoUSD, precoLiquidoUSD;
-
   if (modo === 'bruto-liq') {
     precoBrutoUSD = precoInput;
     precoBrutoBRL = precoBrutoUSD * cotacao;
@@ -1138,63 +658,22 @@ function calcular() {
     precoBrutoBRL = divisor > 0 ? precoLiquidoBRL / divisor : 0;
     precoBrutoUSD = cotacao > 0 ? precoBrutoBRL / cotacao : 0;
   }
-
   const icmsVal = precoBrutoBRL * p.icms;
   const pcVal = (precoBrutoBRL - icmsVal) * p.pc;
   const ipiVal = precoBrutoBRL * p.ipi;
   const valorNF = precoBrutoBRL + ipiVal;
   const cargaTrib = precoBrutoBRL > 0 ? ((icmsVal + pcVal) / precoBrutoBRL) * 100 : 0;
   const economiaTotal = (precoBrutoBRL * p.pc - pcVal) * qtd;
-
-  return {
-    p, precoBrutoUSD, precoLiquidoUSD, precoBrutoBRL, precoLiquidoBRL,
-    icmsVal, pcVal, ipiVal, valorNF, qtd, cargaTrib, fator, economiaTotal,
-    cotacao
-  };
+  return { p, precoBrutoUSD, precoLiquidoUSD, precoBrutoBRL, precoLiquidoBRL, icmsVal, pcVal, ipiVal, valorNF, qtd, cargaTrib, fator, economiaTotal, cotacao };
 }
 
-// ============================================================
-// COMPARATIVO REFORMA TRIBUTÁRIA (LC 214/2025)
-// ============================================================
-
-function isOleoEssencial(familiaKey) {
-  return familiaKey.indexOf('oleo') === 0 || familiaKey === 'terpenico';
-}
-
-function identificarTratamentoReforma(familiaKey, operacao, destino) {
-  if (operacao === 'export') return 'imune';
-  if (familiaKey.indexOf('suco') === 0) return 'reduzido60';
-  if (isOleoEssencial(familiaKey)) {
-    if (destino === 'fertilizante') return 'reduzido60';
-    return 'padrao';
-  }
+// ===== COMPARATIVO REFORMA =====
+function isOleoEssencial(k) { return k.indexOf('oleo') === 0 || k === 'terpenico'; }
+function identificarTratamentoReforma(k, op, dest) {
+  if (op === 'export') return 'imune';
+  if (k.indexOf('suco') === 0) return 'reduzido60';
+  if (isOleoEssencial(k)) return dest === 'fertilizante' ? 'reduzido60' : 'padrao';
   return 'padrao';
-}
-
-function cenario2026(precoBrutoBRL, p) {
-  const icmsVal = precoBrutoBRL * p.icms;
-  const pcVal = (precoBrutoBRL - icmsVal) * p.pc;
-  const ipiVal = precoBrutoBRL * p.ipi;
-  const total = icmsVal + pcVal;
-  return { icms: icmsVal, pc: pcVal, ipi: ipiVal, cbs: 0, ibs: 0, total, liquido: precoBrutoBRL - total };
-}
-
-function cenario2027(precoBrutoBRL, p, redutor, cbsAliq) {
-  const icmsVal = precoBrutoBRL * p.icms;
-  const ipiVal = precoBrutoBRL * p.ipi;
-  const cbsVal = precoBrutoBRL * cbsAliq * redutor;
-  const total = icmsVal + cbsVal;
-  return { icms: icmsVal, pc: 0, ipi: ipiVal, cbs: cbsVal, ibs: 0, total, liquido: precoBrutoBRL - total };
-}
-
-function cenario2033(precoBrutoBRL, p, redutor, cbsAliq, ibsAliq, operacao) {
-  if (operacao === 'export') {
-    return { icms: 0, pc: 0, ipi: 0, cbs: 0, ibs: 0, total: 0, liquido: precoBrutoBRL };
-  }
-  const cbsVal = precoBrutoBRL * cbsAliq * redutor;
-  const ibsVal = precoBrutoBRL * ibsAliq * redutor;
-  const total = cbsVal + ibsVal;
-  return { icms: 0, pc: 0, ipi: 0, cbs: cbsVal, ibs: ibsVal, total, liquido: precoBrutoBRL - total };
 }
 
 function renderReforma() {
@@ -1203,95 +682,59 @@ function renderReforma() {
   const familiaKey = document.getElementById('sel-familia').value;
   const destino = document.getElementById('sel-destino').value;
   const tratamento = identificarTratamentoReforma(familiaKey, p.operacao, destino);
-
   const totalCBSIBS = (parseFloat(document.getElementById('cbs-ibs-total').value) || 0) / 100;
   const cbsAliq = totalCBSIBS * 0.332;
   const ibsAliq = totalCBSIBS * 0.668;
-
-  let redutor = 1;
-  if (tratamento === 'reduzido60') redutor = 0.4;
-  if (tratamento === 'imune') redutor = 0;
+  let redutor = tratamento === 'reduzido60' ? 0.4 : (tratamento === 'imune' ? 0 : 1);
 
   const badgeArea = document.getElementById('reforma-badge-area');
-  if (tratamento === 'imune') {
-    badgeArea.innerHTML = '<span class="reforma-badge export">Exportação imune</span>';
-  } else if (tratamento === 'reduzido60') {
-    if (isOleoEssencial(familiaKey)) {
-      badgeArea.innerHTML = '<span class="reforma-badge suco">Redução 60% (Anexo IX — fertilizante)</span>';
-    } else {
-      badgeArea.innerHTML = '<span class="reforma-badge suco">Redução 60% (Anexo VII — alimento)</span>';
-    }
-  } else {
-    badgeArea.innerHTML = '<span class="reforma-badge padrao">Alíquota padrão (indústria)</span>';
-  }
+  if (tratamento === 'imune') badgeArea.innerHTML = '<span class="reforma-badge export">Exportação imune</span>';
+  else if (tratamento === 'reduzido60') badgeArea.innerHTML = '<span class="reforma-badge suco">Redução 60%</span>';
+  else badgeArea.innerHTML = '<span class="reforma-badge padrao">Alíquota padrão</span>';
 
-  const c26 = cenario2026(r.precoBrutoBRL, p);
-  const c27real = cenario2027(r.precoBrutoBRL, p, redutor, cbsAliq);
-  const c33 = cenario2033(r.precoBrutoBRL, p, redutor, cbsAliq, ibsAliq, p.operacao);
+  const icms26 = r.precoBrutoBRL * p.icms;
+  const pc26 = (r.precoBrutoBRL - icms26) * p.pc;
+  const ipi26 = r.precoBrutoBRL * p.ipi;
+  const t26 = icms26 + pc26;
+  document.getElementById('r26-icms').textContent = p.operacao === 'export' ? 'imune' : fmtBRL(icms26);
+  document.getElementById('r26-pc').textContent = p.operacao === 'export' ? 'imune' : fmtBRL(pc26);
+  document.getElementById('r26-ipi').textContent = p.ipi > 0 ? fmtBRL(ipi26) : '—';
+  document.getElementById('r26-carga').textContent = fmtBRL(t26);
+  document.getElementById('r26-liq').textContent = fmtBRL(r.precoBrutoBRL - t26);
 
-  document.getElementById('r26-icms').textContent = p.operacao === 'export' ? 'imune' : fmtBRL(c26.icms);
-  document.getElementById('r26-pc').textContent = p.operacao === 'export' ? 'imune' : fmtBRL(c26.pc);
-  document.getElementById('r26-ipi').textContent = p.ipi > 0 ? fmtBRL(c26.ipi) : '—';
-  document.getElementById('r26-carga').textContent = fmtBRL(c26.total) + ' (' + fmtPct(r.precoBrutoBRL > 0 ? (c26.total / r.precoBrutoBRL) * 100 : 0) + ')';
-  document.getElementById('r26-liq').textContent = fmtBRL(c26.liquido);
+  const cbs27 = r.precoBrutoBRL * cbsAliq * redutor;
+  const t27 = icms26 + cbs27;
+  document.getElementById('r27-icms').textContent = p.operacao === 'export' ? 'imune' : fmtBRL(icms26);
+  document.getElementById('r27-ipi').textContent = p.ipi > 0 ? fmtBRL(ipi26) : '—';
+  document.getElementById('r27-cbs').textContent = p.operacao === 'export' ? 'imune' : fmtBRL(cbs27);
+  document.getElementById('r27-carga').textContent = fmtBRL(t27);
+  document.getElementById('r27-liq').textContent = fmtBRL(r.precoBrutoBRL - t27);
 
-  document.getElementById('r27-icms').textContent = p.operacao === 'export' ? 'imune' : fmtBRL(c27real.icms);
-  document.getElementById('r27-ipi').textContent = p.ipi > 0 ? fmtBRL(c27real.ipi) : '—';
-  document.getElementById('r27-cbs').textContent = p.operacao === 'export' ? 'imune' : fmtBRL(c27real.cbs);
-  document.getElementById('r27-carga').textContent = fmtBRL(c27real.total) + ' (' + fmtPct(r.precoBrutoBRL > 0 ? (c27real.total / r.precoBrutoBRL) * 100 : 0) + ')';
-  document.getElementById('r27-liq').textContent = fmtBRL(c27real.liquido);
-
-  document.getElementById('r33-cbs').textContent = p.operacao === 'export' ? 'imune' : fmtBRL(c33.cbs);
-  document.getElementById('r33-ibs').textContent = p.operacao === 'export' ? 'imune' : fmtBRL(c33.ibs);
-  document.getElementById('r33-carga').textContent = fmtBRL(c33.total) + ' (' + fmtPct(r.precoBrutoBRL > 0 ? (c33.total / r.precoBrutoBRL) * 100 : 0) + ')';
-  document.getElementById('r33-liq').textContent = fmtBRL(c33.liquido);
-
-  let nota = '<strong>Base legal:</strong> LC 214/2025 · EC 132/2023 · Estimativas sujeitas à definição pelo Senado.';
-  if (tratamento === 'imune') {
-    nota += ' <strong>Exportação:</strong> imune com manutenção integral de créditos em todos os cenários.';
-  } else if (tratamento === 'reduzido60' && isOleoEssencial(familiaKey)) {
-    nota += ' <strong>Óleo essencial → fertilizante (Anexo IX, item 7):</strong> redução de 60% condicional ao destino comprovado.';
-  } else if (tratamento === 'reduzido60') {
-    nota += ' <strong>Sucos (Anexo VII):</strong> redução de 60% condicional a "consumo humano, sem açúcar/conservantes".';
-  } else if (isOleoEssencial(familiaKey)) {
-    nota += ' <strong>Óleo essencial → indústria:</strong> alíquota padrão integral.';
-  } else {
-    nota += ' <strong>Produto sem benefício específico</strong> nos anexos da LC 214/2025.';
-  }
-  document.getElementById('reforma-footnote').innerHTML = nota;
+  const cbs33 = p.operacao === 'export' ? 0 : r.precoBrutoBRL * cbsAliq * redutor;
+  const ibs33 = p.operacao === 'export' ? 0 : r.precoBrutoBRL * ibsAliq * redutor;
+  const t33 = cbs33 + ibs33;
+  document.getElementById('r33-cbs').textContent = p.operacao === 'export' ? 'imune' : fmtBRL(cbs33);
+  document.getElementById('r33-ibs').textContent = p.operacao === 'export' ? 'imune' : fmtBRL(ibs33);
+  document.getElementById('r33-carga').textContent = fmtBRL(t33);
+  document.getElementById('r33-liq').textContent = fmtBRL(r.precoBrutoBRL - t33);
 }
 
-// ============================================================
-// RENDERIZAÇÃO PRINCIPAL
-// ============================================================
-
+// ===== RENDER =====
 function render() {
   const r = calcular();
   const p = r.p;
   const familiaKey = document.getElementById('sel-familia').value;
-
   document.getElementById('grp-estado').style.display = p.operacao === 'interno-out' ? 'block' : 'none';
-  const mostrarDestino = isOleoEssencial(familiaKey) && p.operacao !== 'export';
-  document.getElementById('grp-destino').style.display = mostrarDestino ? 'block' : 'none';
-
-  document.getElementById('p-empresa').textContent = `${p.empresa.nome.split(' ')[0]} (CFOP ${p.empresa.cfopVenda})`;
+  document.getElementById('grp-destino').style.display = (isOleoEssencial(familiaKey) && p.operacao !== 'export') ? 'block' : 'none';
+  document.getElementById('p-empresa').textContent = p.empresa.nome.split(' ')[0] + ' (CFOP ' + p.empresa.cfopVenda + ')';
   document.getElementById('p-icms').textContent = p.icmsLabel;
   document.getElementById('p-pc').textContent = p.pcLabel;
   document.getElementById('p-ipi').textContent = p.ipiLabel;
 
   let alerts = '';
-  if (p.operacao === 'export') {
-    alerts += '<div class="alert info"><strong>✈️ Operação de Exportação</strong>Imune a ICMS, PIS/COFINS e IPI.</div>';
-  }
-  if (p.empresa.ipiMode === 'pjpe-suspenso' && p.operacao !== 'export') {
-    alerts += '<div class="alert warning"><strong>⚠️ Campo Rico — PJPE</strong>PIS/COFINS 0,925% (LC 224/2025) · IPI suspenso.</div>';
-  }
-  if (p.empresa.ipiMode === 'comercial' && !p.familia.ipiNT && p.operacao !== 'export') {
-    alerts += '<div class="alert warning"><strong>📌 Commodities — Sem destaque de IPI</strong>CFOP ' + p.empresa.cfopVenda + ' · análise RIPI Art. 9º,IV pendente.</div>';
-  }
-  if (p.familia.icmsBase === 'art61' && p.operacao === 'interno-sp') {
-    alerts += '<div class="alert info"><strong>🍊 Benefício Suco de Laranja</strong>ICMS 13,3% (Art. 61 An.II RICMS/SP).</div>';
-  }
+  if (p.operacao === 'export') alerts += '<div class="alert info"><strong>✈️ Exportação</strong>Imune a ICMS, PIS/COFINS e IPI.</div>';
+  if (p.empresa.ipiMode === 'pjpe-suspenso' && p.operacao !== 'export') alerts += '<div class="alert warning"><strong>⚠️ Campo Rico — PJPE</strong>PIS/COFINS 0,925% · IPI suspenso.</div>';
+  if (p.familia.icmsBase === 'art61' && p.operacao === 'interno-sp') alerts += '<div class="alert info"><strong>🍊 Benefício Suco de Laranja</strong>ICMS 13,3% (Art. 61).</div>';
   document.getElementById('alerts-area').innerHTML = alerts;
 
   document.getElementById('row-ipi').style.display = p.ipi > 0 ? 'flex' : 'none';
@@ -1302,18 +745,16 @@ function render() {
   document.getElementById('row-pcTot').style.display = p.pc > 0 ? 'flex' : 'none';
   document.getElementById('row-economia').style.display = (p.pc > 0 && p.icms > 0) ? 'flex' : 'none';
 
-  const precoPrincipalUSD = modo === 'bruto-liq' ? r.precoLiquidoUSD : r.precoBrutoUSD;
-  const precoPrincipalBRL = modo === 'bruto-liq' ? r.precoLiquidoBRL : r.precoBrutoBRL;
-  document.getElementById('out-principalUSD').textContent = fmtUSD(precoPrincipalUSD);
-  document.getElementById('out-principalBRL').textContent = fmtBRL(precoPrincipalBRL);
-
+  const principalUSD = modo === 'bruto-liq' ? r.precoLiquidoUSD : r.precoBrutoUSD;
+  const principalBRL = modo === 'bruto-liq' ? r.precoLiquidoBRL : r.precoBrutoBRL;
+  document.getElementById('out-principalUSD').textContent = fmtUSD(principalUSD);
+  document.getElementById('out-principalBRL').textContent = fmtBRL(principalBRL);
   document.getElementById('out-precoUSD').textContent = fmtUSD(r.precoBrutoUSD);
   document.getElementById('out-precoBRL').textContent = fmtBRL(r.precoBrutoBRL);
   document.getElementById('out-ipi').textContent = '+' + fmtBRL(r.ipiVal);
   document.getElementById('out-icms').textContent = '−' + fmtBRL(r.icmsVal);
   document.getElementById('out-pc').textContent = '−' + fmtBRL(r.pcVal);
   document.getElementById('out-liq').textContent = fmtBRL(r.precoLiquidoBRL);
-
   document.getElementById('out-receitaTot').textContent = fmtBRL(r.precoBrutoBRL * r.qtd);
   document.getElementById('out-ipiTot').textContent = fmtBRL(r.ipiVal * r.qtd);
   document.getElementById('out-nfTot').textContent = fmtBRL(r.valorNF * r.qtd);
@@ -1321,140 +762,21 @@ function render() {
   document.getElementById('out-pcTot').textContent = fmtBRL(r.pcVal * r.qtd);
   document.getElementById('out-netbackTot').textContent = fmtBRL(r.precoLiquidoBRL * r.qtd);
   document.getElementById('out-netbackTotUSD').textContent = fmtUSD2(r.cotacao > 0 ? (r.precoLiquidoBRL * r.qtd) / r.cotacao : 0);
-
   document.getElementById('out-cargaTrib').textContent = fmtPct(r.cargaTrib);
   document.getElementById('out-fator').textContent = fmtFator(r.fator);
   document.getElementById('out-economia').textContent = fmtBRL(r.economiaTotal);
-
   renderReforma();
 }
 
-// ============================================================
-// BASE DE PRODUTOS
-// ============================================================
-
+// ===== PRODUTOS (resumido) =====
 const PRODUTOS = [
-  { codigo: 'CJ61', descricao: 'TERPENO DE LARANJA', familia: 'oleo-laranja', ncm: '3301.12.90', unidade: 'T' },
   { codigo: 'CJ07', descricao: 'OLEO ESSENCIAL DE LARANJA', familia: 'oleo-laranja', ncm: '3301.12.90', unidade: 'T' },
-  { codigo: 'CJ244', descricao: 'FASE OLEOSA DE LARANJA CONCENTRADA 10X', familia: 'oleo-laranja', ncm: '3301.12.90', unidade: 'T' },
-  { codigo: 'CJ88', descricao: 'ÓLEO CONCENTRADO DE LARANJA 5 FOLD', familia: 'oleo-laranja', ncm: '3301.12.90', unidade: 'T' },
-  { codigo: 'CJ128', descricao: 'OLEO ESSENCIAL DE LIMAO TAHITI', familia: 'oleo-limao', ncm: '3301.13.00', unidade: 'T' },
-  { codigo: 'CJ92', descricao: 'TERPENO DE LIMAO SICILIANO', familia: 'oleo-limao', ncm: '3301.12.90', unidade: 'T' },
-  { codigo: 'CJ-08', descricao: 'OLEO ESSENCIAL DE LIMA ACIDA TAHITI', familia: 'oleo-limao', ncm: '3301.19.10', unidade: 'T' },
-  { codigo: 'CJ09', descricao: 'OLEO ESSENCIAL DE LIMAO SICILIANO', familia: 'oleo-limao', ncm: '3301.13.00', unidade: 'T' },
   { codigo: 'CJ08', descricao: 'OLEO ESSENCIAL DE LIMAO TAHITI', familia: 'oleo-limao', ncm: '3301.13.00', unidade: 'T' },
+  { codigo: 'CJ09', descricao: 'OLEO ESSENCIAL DE LIMAO SICILIANO', familia: 'oleo-limao', ncm: '3301.13.00', unidade: 'T' },
+  { codigo: 'CJ01', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
   { codigo: 'CJ04', descricao: "D'LIMONENO DE LARANJA", familia: 'limoneno', ncm: '2902.19.10', unidade: 'T' },
-  { codigo: 'CJ01', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.19.00', unidade: 'T' },
-  { codigo: 'CJ122', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ151', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ16', descricao: 'SUCO CONCENTRADO DE LARANJA CLARIFICADO', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ161', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ162', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ169', descricao: 'SUCO CONCENTRADO DE LARANJA (PREMIER)', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ191', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ193', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ227', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ229', descricao: 'Suco Concentrado de Laranja', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ232', descricao: 'Suco Concentrado de Laranja', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ253', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ255', descricao: 'Suco Concentrado de Laranja', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ261', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.19.00', unidade: 'T' },
-  { codigo: 'CJ29', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ38', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ41', descricao: 'SUCO CONCENTRADO DE LARANJA CLARIFICADO', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ85', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ87', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ97', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'SK01', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'SK162', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'SK193', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ248', descricao: 'SUCO CONCENTRADO DE LARANJA', familia: 'suco-laranja', ncm: '2009.11.00', unidade: 'T' },
-  { codigo: 'CJ91', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-  { codigo: 'CJ03', descricao: 'Suco Concentrado de Siciliano', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-  { codigo: 'CJ104', descricao: 'Suco Concentrado de Limão Siciliano Clarificado', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ107', descricao: 'Suco de Limão Tahiti Integral (NFC)', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-  { codigo: 'CJ108', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI CLARIFICADO', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-  { codigo: 'CJ112', descricao: 'SUCO CONCENTRADO DE LIMAO TAHITI CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ118', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ120', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ137', descricao: 'SUCO CONCENTRADO DE LIMAO TAHITI CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ138', descricao: 'SUCO CONCENTRADO DE LIMAO TAHITI', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ150', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ155', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI CLARIFICADO CONCENTRADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ164', descricao: 'SUCO DE LIMAO TAHITI', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-  { codigo: 'CJ168', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ17', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI CLARIFICADO', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-  { codigo: 'CJ172', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ174', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI CLARIFICADO', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-  { codigo: 'CJ176', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ18', descricao: 'SUCO CONCENTRADO DE LIMÃO SICILIANO CLARIFICADO', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-  { codigo: 'CJ181', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ182', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ183', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ184', descricao: 'SUCO CONCENTRADO DE LIMAO TAHITI CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ185', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ186', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ187', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ188', descricao: 'Suco Concentrado de Limao Siciliano', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ189', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ190', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ192', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ194', descricao: 'Suco de Limao Siciliano Integral (NFC)', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ198', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ199', descricao: 'Suco Concentrado de Limão Tahiti Clarificado', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ202', descricao: 'Suco Concentrado de Limão Siciliano', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ21', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO CLARIFICADO', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-  { codigo: 'CJ216', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO CLARIFICADO', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-  { codigo: 'CJ220', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ222', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-  { codigo: 'CJ223', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ224', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ225', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ226', descricao: 'SUCO CONCENTRADO DE LIMAO TAHITI', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ230', descricao: 'Suco Concentrado de Limao Tahiti Clarificado', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ234', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ236', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ238', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ239', descricao: 'Suco Concentrado de Limão Tahiti', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ24', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ240', descricao: 'Suco de Limão Siciliano Integral (NFC)', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-  { codigo: 'CJ243', descricao: 'Suco Concentrado de Limão Tahiti Clarificado', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ246', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-  { codigo: 'CJ250', descricao: 'SUCO CONCENTRADO DE LIMÃO SICILIANO CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ254', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ256', descricao: 'Suco Concentrado de Limão Siciliano Clarificado', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ259', descricao: 'Suco Concentrado de Limão Siciliano', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ26', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ262', descricao: 'Suco Concentrado de Limão Siciliano', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ27', descricao: 'Suco Limão Siciliano Não Concentrado', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-  { codigo: 'CJ30', descricao: 'SUCO CONCENTRADO DE LIMAO TAHITI CLARIFICADO', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-  { codigo: 'CJ31', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ32', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO CLARIFICADO', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-  { codigo: 'CJ33', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ37', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ39', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-  { codigo: 'CJ42', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ43', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ44', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-  { codigo: 'CJ45', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ52', descricao: 'SUCO CONCENTRADO DE LIMAO TAHITI CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ54', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ65', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ72', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ57', descricao: 'SUCO CONCENTRADO DE LIMAO SICILIANO CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ20', descricao: 'Suco Concentrado de Limão Siciliano Clarificado', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ152', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ117', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ116', descricao: 'SUCO CONCENTRADO DE LIMÃO TAHITI CLARIFICADO', familia: 'suco-limao', ncm: '2009.31.00', unidade: 'T' },
-  { codigo: 'CJ205', descricao: 'SUCO DE LIMAO TAHITI NAO CONCENTRADO ASSEPTICO REFRIGERADO (NFC)', familia: 'suco-limao', ncm: '2009.39.00', unidade: 'T' },
-  { codigo: 'CJ249', descricao: 'CONCENTRADO LIQUIDO PARA REFRESCO DE LIMAO SICILIANO', familia: 'suco-misto', ncm: '2009.90.00', unidade: 'T' },
-  { codigo: 'CJ251', descricao: 'Suco de Limão Tahiti Integral (NFC)', familia: 'suco-misto', ncm: '2009.90.00', unidade: 'T' },
-  { codigo: 'CJ58', descricao: 'SUCO MISTO DE LARANJA E LIMAO CONCENTRADO PRESERVADO', familia: 'suco-misto', ncm: '2009.90.00', unidade: 'T' }
+  { codigo: 'CJ61', descricao: 'TERPENO DE LARANJA', familia: 'oleo-laranja', ncm: '3301.12.90', unidade: 'T' }
 ];
-
-// ============================================================
-// CADASTRO DE VENDEDORES
-// ============================================================
 
 const VENDEDORES = [
   { id: 'lucas', nome: 'Lucas Albert', telefone: '(19) 98114-0444', empresas: 'todas' },
@@ -1464,18 +786,15 @@ const VENDEDORES = [
 function obterVendedorSelecionado() {
   const sel = document.getElementById('sel-vendedor');
   if (!sel || !sel.value) return null;
-  return VENDEDORES.find(function (v) { return v.id === sel.value; }) || null;
+  return VENDEDORES.find(function(v) { return v.id === sel.value; }) || null;
 }
 
 function popularVendedores() {
   const sel = document.getElementById('sel-vendedor');
-  const empresaKey = document.getElementById('sel-empresa').value;
   if (!sel) return;
   const atual = sel.value;
   sel.innerHTML = '<option value="">— Selecione o vendedor —</option>';
-  VENDEDORES.forEach(function (v) {
-    const atende = v.empresas === 'todas' || (Array.isArray(v.empresas) && v.empresas.indexOf(empresaKey) >= 0);
-    if (!atende) return;
+  VENDEDORES.forEach(function(v) {
     const opt = document.createElement('option');
     opt.value = v.id;
     opt.textContent = v.nome + ' — ' + v.telefone;
@@ -1483,118 +802,120 @@ function popularVendedores() {
   });
   try {
     const salvo = localStorage.getItem('vendedor-padrao');
-    if (atual && sel.querySelector('option[value="' + atual + '"]')) {
-      sel.value = atual;
-    } else if (salvo && sel.querySelector('option[value="' + salvo + '"]')) {
-      sel.value = salvo;
-    }
-  } catch (e) {}
+    if (atual && sel.querySelector('option[value="' + atual + '"]')) sel.value = atual;
+    else if (salvo && sel.querySelector('option[value="' + salvo + '"]')) sel.value = salvo;
+  } catch(e) {}
 }
 
 function salvarVendedorPadrao() {
   const sel = document.getElementById('sel-vendedor');
-  if (!sel) return;
-  try { if (sel.value) localStorage.setItem('vendedor-padrao', sel.value); } catch (e) {}
+  try { if (sel.value) localStorage.setItem('vendedor-padrao', sel.value); } catch(e) {}
 }
 
-// ============================================================
-// DADOS CADASTRAIS DAS EMPRESAS
-// ============================================================
-
 const EMPRESAS_CADASTRO = {
-  'citrus': {
-    nomeFantasia: 'Citrus Juice', razaoSocial: 'CITRUS JUICE LTDA',
-    cnpj: '11.186.770/0001-97', ie: '367.014.520.117',
-    endereco: 'Rodovia Cezário José de Castilho, Km 474,5, S/N — Zona Rural',
-    cidade: 'Itajobi/SP — CEP 15.840-000',
-    telefone: '(17) 99634-XXXX [preencher]', email: 'comercial@citrusjuice.com.br',
-    site: 'www.citrusjuice.com.br', logo: './logos/citrus-juice.png',
-    corPrimaria: '#7CB342', corSecundaria: '#1B5E20'
-  },
-  'kiki': {
-    nomeFantasia: 'Sucos Kiki', razaoSocial: 'SUCOS KIKI LTDA',
-    cnpj: '60.823.747/0001-71', ie: '[Sintegra SP — preencher]',
-    endereco: 'Rodovia Prof. Zeferino Vaz (SP-332), S/N, Km 165, Cx Postal 43 — Distrito Industrial',
-    cidade: 'Engenheiro Coelho/SP — CEP 13.449-899',
-    telefone: '(19) 3857-XXXX [preencher]', email: 'comercial@sucoskiki.com.br',
-    site: 'www.sucoskiki.com.br', logo: './logos/sucos-kiki.png',
-    corPrimaria: '#C62828', corSecundaria: '#1B5E20'
-  },
-  'commodities': {
-    nomeFantasia: 'Citrus Commodities', razaoSocial: 'CITRUS COMMODITIES S.A.',
-    cnpj: '27.182.892/0001-45', ie: '[Sintegra SP — preencher]',
-    endereco: 'Avenida Paulista, 1765, Andar 13, Conj 131, Sala 1317 — Bela Vista',
-    cidade: 'São Paulo/SP — CEP 01.311-930',
-    telefone: '[preencher]', email: 'comercial@citruscommodities.com.br',
-    site: 'www.citruscommodities.com.br', logo: './logos/citrus-commodities.png',
-    corPrimaria: '#1a1a1a', corSecundaria: '#666666'
-  },
-  'camporico': {
-    nomeFantasia: 'Campo Rico', razaoSocial: 'AGROINDUSTRIAL CAMPO RICO LTDA',
-    cnpj: '[CNPJ — preencher]', ie: '[Sintegra SP — preencher]',
-    endereco: '[Endereço — preencher]', cidade: '[Cidade/UF — CEP]',
-    telefone: '[preencher]', email: 'comercial@camporico.com.br',
-    site: 'www.camporico.com.br', logo: './logos/campo-rico.png',
-    corPrimaria: '#1B4332', corSecundaria: '#C9A84C'
-  }
+  'citrus':      { nomeFantasia: 'Citrus Juice', razaoSocial: 'CITRUS JUICE LTDA', cnpj: '11.186.770/0001-97', ie: '367.014.520.117', endereco: 'Rod. Cezário José de Castilho, Km 474,5', cidade: 'Itajobi/SP — CEP 15.840-000', telefone: '(17) 99634-XXXX', logo: './logos/citrus-juice.png', corPrimaria: '#7CB342', corSecundaria: '#1B5E20' },
+  'kiki':        { nomeFantasia: 'Sucos Kiki', razaoSocial: 'SUCOS KIKI LTDA', cnpj: '60.823.747/0001-71', ie: '[preencher]', endereco: 'Rod. Prof. Zeferino Vaz (SP-332), Km 165', cidade: 'Engenheiro Coelho/SP — CEP 13.449-899', telefone: '(19) 3857-XXXX', logo: './logos/sucos-kiki.png', corPrimaria: '#C62828', corSecundaria: '#1B5E20' },
+  'commodities': { nomeFantasia: 'Citrus Commodities', razaoSocial: 'CITRUS COMMODITIES S.A.', cnpj: '27.182.892/0001-45', ie: '[preencher]', endereco: 'Av. Paulista, 1765, Andar 13, Conj 131, Sala 1317', cidade: 'São Paulo/SP — CEP 01.311-930', telefone: '[preencher]', logo: './logos/citrus-commodities.png', corPrimaria: '#1a1a1a', corSecundaria: '#666666' },
+  'camporico':   { nomeFantasia: 'Campo Rico', razaoSocial: 'AGROINDUSTRIAL CAMPO RICO LTDA', cnpj: '[preencher]', ie: '[preencher]', endereco: '[preencher]', cidade: '[preencher]', telefone: '[preencher]', logo: './logos/campo-rico.png', corPrimaria: '#1B4332', corSecundaria: '#C9A84C' }
 };
 
-// ============================================================
-// API GOOGLE SHEETS (JSONP)
-// ============================================================
-
+// ===== API GOOGLE SHEETS =====
 const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbxUH_AwXm-TZM9aX6PbvRuaqeAF94UDKThDuylqxDwoqfmIH33gMHP8D7zyMi3huAPY/exec';
 
 async function registrarECobrarNumero(dados) {
   const params = new URLSearchParams({
     acao: 'registrar',
-    vendedor: dados.vendedor || '',
-    empresa: dados.empresa || '',
-    cliente: dados.cliente || '',
-    cnpjCliente: dados.cnpjCliente || '',
-    produto: dados.produto || '',
-    quantidade: String(dados.quantidade || ''),
-    valorUSD: String(dados.valorUSD || ''),
-    valorBRL: String(dados.valorBRL || '')
+    vendedor: dados.vendedor || '', empresa: dados.empresa || '',
+    cliente: dados.cliente || '', cnpjCliente: dados.cnpjCliente || '',
+    produto: dados.produto || '', quantidade: String(dados.quantidade || ''),
+    valorUSD: String(dados.valorUSD || ''), valorBRL: String(dados.valorBRL || '')
   });
-
-  const resp = await fetch(SHEETS_API_URL + '?' + params.toString(), {
-    method: 'GET',
-    redirect: 'follow'
-  });
-
+  const resp = await fetch(SHEETS_API_URL + '?' + params.toString(), { method: 'GET', redirect: 'follow' });
   if (!resp.ok) throw new Error('HTTP ' + resp.status);
-
   const data = await resp.json();
   if (!data.sucesso) throw new Error(data.erro || 'Erro no servidor');
-
   return data;
 }
 
-// ============================================================
-// GERAÇÃO DE COTAÇÃO PDF
-// ============================================================
+// ===== LOGIN =====
+let usuarioLogado = null;
 
+async function fazerLogin() {
+  const usuario = (document.getElementById('login-usuario').value || '').trim();
+  const senha = (document.getElementById('login-senha').value || '').trim();
+  const lembrar = document.getElementById('login-lembrar').checked;
+  const erroEl = document.getElementById('login-erro');
+  const btnEl = document.getElementById('btn-entrar');
+  if (!usuario || !senha) { erroEl.textContent = 'Preencha o usuário e a senha.'; erroEl.style.display = 'block'; return; }
+  btnEl.textContent = '⏳ Verificando...'; btnEl.disabled = true; erroEl.style.display = 'none';
+  try {
+    const params = new URLSearchParams({ acao: 'login', usuario, senha });
+    const resp = await fetch(SHEETS_API_URL + '?' + params.toString(), { method: 'GET', redirect: 'follow' });
+    const data = await resp.json();
+    if (data.sucesso) {
+      usuarioLogado = data;
+      if (lembrar) {
+        localStorage.setItem('calc-usuario', usuario);
+        localStorage.setItem('calc-senha', senha);
+        localStorage.setItem('calc-lembrar', '1');
+      } else {
+        localStorage.removeItem('calc-usuario');
+        localStorage.removeItem('calc-senha');
+        localStorage.removeItem('calc-lembrar');
+      }
+      document.getElementById('login-overlay').style.display = 'none';
+      renderizarBarraUsuario(data);
+    } else {
+      erroEl.textContent = data.erro || 'Usuário ou senha incorretos.';
+      erroEl.style.display = 'block';
+    }
+  } catch (err) {
+    erroEl.textContent = 'Erro de conexão. Tente novamente.';
+    erroEl.style.display = 'block';
+    console.error('Erro login:', err);
+  }
+  btnEl.textContent = 'Entrar'; btnEl.disabled = false;
+}
+
+function renderizarBarraUsuario(data) {
+  const headerEl = document.querySelector('.header');
+  const bar = document.createElement('div');
+  bar.className = 'user-bar';
+  bar.innerHTML = '👤 <strong>' + data.nome + '</strong>' +
+    (data.perfil === 'admin' ? '<span class="user-badge">ADMIN</span>' : '') +
+    '<button class="logout-btn" onclick="fazerLogout()">Sair</button>';
+  headerEl.appendChild(bar);
+  const cot = parseFloat(document.getElementById('cotacao').value) || 0;
+  if (Math.abs(cot - 5.20) < 0.01) buscarPtax();
+}
+
+function fazerLogout() {
+  localStorage.removeItem('calc-usuario');
+  localStorage.removeItem('calc-senha');
+  localStorage.removeItem('calc-lembrar');
+  window.location.reload();
+}
+
+async function tentarLoginAutomatico() {
+  if (localStorage.getItem('calc-lembrar') !== '1') return;
+  const usuario = localStorage.getItem('calc-usuario');
+  const senha = localStorage.getItem('calc-senha');
+  if (!usuario || !senha) return;
+  document.getElementById('login-usuario').value = usuario;
+  document.getElementById('login-senha').value = senha;
+  document.getElementById('login-lembrar').checked = true;
+  await fazerLogin();
+}
+
+// ===== PDF VIA IMPRESSÃO NATIVA =====
 async function gerarCotacaoPDF() {
   const vendedor = obterVendedorSelecionado();
   if (!vendedor) { mostrarToast('⚠️ Selecione um vendedor antes de gerar o PDF'); return; }
-
-  // Verifica se as bibliotecas carregaram
-  if (typeof html2canvas === 'undefined') {
-    alert('A biblioteca de PDF não carregou. Recarregue a página (F5) e tente novamente.');
-    return;
-  }
-  if (!window.jspdf || !window.jspdf.jsPDF) {
-    alert('A biblioteca jsPDF não carregou. Recarregue a página (F5) e tente novamente.');
-    return;
-  }
-
   const r = calcular();
   const p = r.p;
   const empresaKey = document.getElementById('sel-empresa').value;
   const cadastro = EMPRESAS_CADASTRO[empresaKey];
   const ncm = document.getElementById('sel-ncm').value;
-  const ncmDescricao = document.getElementById('sel-ncm').options[document.getElementById('sel-ncm').selectedIndex].text;
   const operacaoSel = document.getElementById('sel-operacao');
   const operacaoTexto = operacaoSel.options[operacaoSel.selectedIndex].text;
   const estado = document.getElementById('sel-estado').value;
@@ -1612,176 +933,118 @@ async function gerarCotacaoPDF() {
   const qtd = r.qtd;
   const totalUSD = r.precoBrutoUSD * qtd;
   const totalBRL = r.precoBrutoBRL * qtd;
-
-  const produtoTxt = produtoSelecionadoAtual
-    ? produtoSelecionadoAtual.codigo + ' — ' + produtoSelecionadoAtual.descricao
-    : p.familia.label + ' (' + ncm + ')';
+  const produtoTxt = produtoSelecionadoAtual ? produtoSelecionadoAtual.codigo + ' — ' + produtoSelecionadoAtual.descricao : p.familia.label + ' (' + ncm + ')';
 
   const numeroCot = await obterNumeroCotacao({
-    vendedor: vendedor.nome, empresa: cadastro.razaoSocial,
-    cliente: cliRazao, cnpjCliente: cliCnpj, produto: produtoTxt,
-    quantidade: qtd + ' ' + unidade,
+    vendedor: vendedor.nome, empresa: cadastro.razaoSocial, cliente: cliRazao, cnpjCliente: cliCnpj,
+    produto: produtoTxt, quantidade: qtd + ' ' + unidade,
     valorUSD: totalUSD.toFixed(2), valorBRL: totalBRL.toFixed(2)
   });
 
-  mostrarToast('⏳ Gerando PDF...');
+  mostrarToast('⏳ Preparando PDF...');
 
-  // Container off-screen com largura explícita (necessário para o html2canvas)
-  const container = document.createElement('div');
-  container.style.cssText = 'position:absolute;left:-9999px;top:0;width:794px;';
-  container.innerHTML = `
-    <div id="cotacao-render" style="width:794px;background:#fff;font-family:Arial,sans-serif;color:#1a2332;">
-      <div style="background:linear-gradient(135deg,${cadastro.corPrimaria} 0%,${cadastro.corSecundaria} 100%);color:#fff;padding:24px 36px;display:flex;justify-content:space-between;align-items:center;">
-        <div style="display:flex;align-items:center;gap:16px;">
-          <div id="logo-slot"></div>
-          <div>
-            <div style="font-size:22px;font-weight:700;">${cadastro.razaoSocial}</div>
-            <div style="font-size:11px;opacity:0.9;margin-top:2px;">CNPJ ${cadastro.cnpj} · IE ${cadastro.ie}</div>
-            <div style="font-size:11px;opacity:0.9;">${cadastro.endereco}</div>
-            <div style="font-size:11px;opacity:0.9;">${cadastro.cidade} · ${cadastro.telefone}</div>
-          </div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-size:10px;opacity:0.85;text-transform:uppercase;letter-spacing:1px;">Proposta Comercial</div>
-          <div style="font-size:26px;font-weight:700;margin-top:2px;">${numeroCot}</div>
-          <div style="font-size:11px;opacity:0.9;margin-top:4px;">Emitida em: ${dataEmissao}</div>
-          <div style="font-size:11px;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:4px;margin-top:4px;display:inline-block;">Válida até: ${validadeFmt}</div>
-        </div>
-      </div>
+  const logoStr = logosBase64[empresaKey]
+    ? '<img src="' + logosBase64[empresaKey] + '" style="height:52px;width:auto;vertical-align:middle;margin-right:14px;background:#fff;padding:4px;border-radius:4px;">'
+    : '';
 
-      <div style="padding:20px 36px;background:#f8fafc;border-bottom:1px solid #e2e8f0;">
-        <div style="font-size:10px;font-weight:700;color:${cadastro.corPrimaria};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Destinatário</div>
-        <div style="font-size:15px;font-weight:600;margin-bottom:4px;">${cliRazao}</div>
-        <div style="font-size:12px;color:#475569;">CNPJ: ${cliCnpj} · A/C: ${cliContato} · ${cliEmail}</div>
-      </div>
+  const tributacaoTxt = p.operacao === 'export'
+    ? 'Exportação — imune (ICMS, PIS/COFINS, IPI)'
+    : operacaoTexto + (p.operacao === 'interno-out' ? ' (' + estado + ')' : '');
+  const tributacaoDetalhe = p.icmsLabel !== 'Imune (exportação)' ? 'ICMS: ' + p.icmsLabel + ' · PIS+COFINS: ' + p.pcLabel : '';
 
-      <div style="padding:24px 36px;">
-        <div style="font-size:10px;font-weight:700;color:${cadastro.corPrimaria};text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Produto Cotado</div>
-        <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
-          <thead><tr style="background:${cadastro.corPrimaria};color:#fff;">
-            <th style="padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;">Descrição</th>
-            <th style="padding:10px 12px;text-align:center;font-size:11px;text-transform:uppercase;">NCM</th>
-            <th style="padding:10px 12px;text-align:right;font-size:11px;text-transform:uppercase;">Quantidade</th>
-            <th style="padding:10px 12px;text-align:right;font-size:11px;text-transform:uppercase;">Unit. USD</th>
-            <th style="padding:10px 12px;text-align:right;font-size:11px;text-transform:uppercase;">Total USD</th>
-          </tr></thead>
-          <tbody><tr style="border-bottom:1px solid #e2e8f0;">
-            <td style="padding:14px 12px;font-size:13px;"><strong>${p.familia.label}</strong><br><span style="font-size:11px;color:#64748b;">${ncmDescricao.split('— ')[1] || ''}</span></td>
-            <td style="padding:14px 12px;text-align:center;font-size:12px;color:#475569;">${ncm}</td>
-            <td style="padding:14px 12px;text-align:right;font-size:13px;">${qtd.toLocaleString('pt-BR')} ${unidade}</td>
-            <td style="padding:14px 12px;text-align:right;font-size:13px;font-weight:600;">${fmtUSD(r.precoBrutoUSD)}</td>
-            <td style="padding:14px 12px;text-align:right;font-size:13px;font-weight:700;color:${cadastro.corPrimaria};">${fmtUSD2(totalUSD)}</td>
-          </tr></tbody>
-        </table>
+  const html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>' + numeroCot + '</title><style>' +
+    '*{box-sizing:border-box;margin:0;padding:0}' +
+    'body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#1a2332;background:#fff}' +
+    '@page{size:A4;margin:8mm}' +
+    '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}' +
+    '.hdr{background:' + cadastro.corPrimaria + ';color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center}' +
+    '.hdr-r{text-align:right}.num{font-size:20px;font-weight:700}' +
+    '.sec{padding:10px 20px}.lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:' + cadastro.corPrimaria + ';margin-bottom:6px}' +
+    'table{width:100%;border-collapse:collapse}' +
+    'th{background:' + cadastro.corPrimaria + ';color:#fff;padding:8px 10px;font-size:10px;text-transform:uppercase;text-align:left}' +
+    'th.r,td.r{text-align:right}' +
+    'td{padding:9px 10px;border-bottom:1px solid #e2e8f0}' +
+    '.tbox{background:' + cadastro.corPrimaria + ';color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;margin:10px 0}' +
+    '.tval{font-size:22px;font-weight:700}' +
+    '.ct td:first-child{width:34%;font-size:10px;font-weight:700;text-transform:uppercase;color:#475569;background:#f8fafc}' +
+    '.ftr{margin:16px 20px 0;padding-top:12px;border-top:2px solid ' + cadastro.corPrimaria + ';display:flex;justify-content:space-between;align-items:flex-end}' +
+    '</style></head><body>' +
 
-        <div style="background:linear-gradient(135deg,${cadastro.corPrimaria} 0%,${cadastro.corSecundaria} 100%);color:#fff;padding:20px 24px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-          <div>
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:0.9;">Valor Total da Proposta</div>
-            <div style="font-size:11px;opacity:0.8;margin-top:2px;">Cotação USD→BRL: R$ ${r.cotacao.toFixed(4).replace('.', ',')}</div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:28px;font-weight:700;">${fmtUSD2(totalUSD)}</div>
-            <div style="font-size:13px;margin-top:2px;">${fmtBRL(totalBRL)}</div>
-          </div>
-        </div>
+    '<div class="hdr"><div style="display:flex;align-items:center">' + logoStr +
+    '<div><div style="font-size:16px;font-weight:700">' + cadastro.razaoSocial + '</div>' +
+    '<div style="font-size:10px;opacity:.9;margin-top:3px">CNPJ ' + cadastro.cnpj + ' · IE ' + cadastro.ie + '</div>' +
+    '<div style="font-size:10px;opacity:.9">' + cadastro.endereco + '</div>' +
+    '<div style="font-size:10px;opacity:.9">' + cadastro.cidade + '</div></div></div>' +
+    '<div class="hdr-r"><div style="font-size:9px;opacity:.85;text-transform:uppercase;letter-spacing:1px">Proposta Comercial</div>' +
+    '<div class="num">' + numeroCot + '</div>' +
+    '<div style="font-size:10px;opacity:.9;margin-top:3px">Emitida em: ' + dataEmissao + '</div>' +
+    '<div style="font-size:10px;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:4px;margin-top:3px;display:inline-block">Válida até: ' + validadeFmt + '</div></div></div>' +
 
-        <div style="font-size:10px;font-weight:700;color:${cadastro.corPrimaria};text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Condições Comerciais</div>
-        <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
-          <tr><td style="padding:10px 14px;width:32%;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;background:#f1f5f9;">Incoterm</td><td style="padding:10px 14px;font-size:13px;background:#f8fafc;">${incoterm}</td></tr>
-          <tr><td style="padding:10px 14px;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;background:#f1f5f9;">Condição de Pagamento</td><td style="padding:10px 14px;font-size:13px;background:#f8fafc;">${pagto}</td></tr>
-          <tr><td style="padding:10px 14px;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;background:#f1f5f9;">Prazo de Entrega</td><td style="padding:10px 14px;font-size:13px;background:#f8fafc;">${prazo}</td></tr>
-          <tr><td style="padding:10px 14px;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;background:#f1f5f9;">Validade da Cotação</td><td style="padding:10px 14px;font-size:13px;font-weight:700;background:#f8fafc;">${validadeFmt}</td></tr>
-          <tr><td style="padding:10px 14px;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;background:#f1f5f9;">Tributação</td><td style="padding:10px 14px;font-size:12px;background:#f8fafc;">${p.operacao === 'export' ? 'Exportação — imune (ICMS, PIS/COFINS, IPI)' : operacaoTexto + (p.operacao === 'interno-out' ? ' (' + estado + ')' : '')}<br><span style="font-size:11px;color:#64748b;">${p.icmsLabel !== 'Imune (exportação)' ? 'ICMS: ' + p.icmsLabel + ' · PIS+COFINS: ' + p.pcLabel : ''}</span></td></tr>
-        </table>
+    '<div class="sec" style="background:#f8fafc;border-bottom:1px solid #e2e8f0">' +
+    '<div class="lbl">Destinatário</div>' +
+    '<div style="font-size:14px;font-weight:600;margin-bottom:3px">' + cliRazao + '</div>' +
+    '<div style="font-size:11px;color:#475569">CNPJ: ' + cliCnpj + ' · A/C: ' + cliContato + ' · ' + cliEmail + '</div></div>' +
 
-        ${obs ? '<div style="font-size:10px;font-weight:700;color:' + cadastro.corPrimaria + ';text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Observações</div><div style="background:#fef9e7;border-left:3px solid #D4A04A;padding:12px 14px;border-radius:4px;font-size:12px;color:#6B5418;line-height:1.5;margin-bottom:20px;">' + obs.replace(/\n/g,'<br>') + '</div>' : ''}
+    '<div class="sec"><div class="lbl">Produto Cotado</div>' +
+    '<table><thead><tr><th>Descrição</th><th>NCM</th><th class="r">Quantidade</th><th class="r">Unit. USD</th><th class="r">Total USD</th></tr></thead>' +
+    '<tbody><tr><td><strong>' + p.familia.label + '</strong></td><td style="font-size:11px;color:#475569">' + ncm + '</td>' +
+    '<td class="r">' + qtd.toLocaleString('pt-BR') + ' ' + unidade + '</td>' +
+    '<td class="r"><strong>' + fmtUSD(r.precoBrutoUSD) + '</strong></td>' +
+    '<td class="r"><strong style="color:' + cadastro.corPrimaria + '">' + fmtUSD2(totalUSD) + '</strong></td>' +
+    '</tr></tbody></table></div>' +
 
-        <div style="margin-top:30px;padding-top:20px;border-top:2px solid ${cadastro.corPrimaria};display:flex;justify-content:space-between;align-items:flex-end;">
-          <div>
-            <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;">Atenciosamente,</div>
-            <div style="font-size:14px;font-weight:700;margin-top:8px;">${vendedor.nome}</div>
-            <div style="font-size:11px;color:#64748b;">Departamento Comercial · ${cadastro.razaoSocial}</div>
-            <div style="font-size:11px;color:#64748b;margin-top:4px;">📱 ${vendedor.telefone}</div>
-          </div>
-          <div style="text-align:right;font-size:9px;color:#94a3b8;">Emitida em ${dataEmissao}<br>${numeroCot} · ${cadastro.nomeFantasia}</div>
-        </div>
-      </div>
-    </div>`;
+    '<div class="tbox"><div>' +
+    '<div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;opacity:.9">Valor Total da Proposta</div>' +
+    '<div style="font-size:10px;opacity:.8;margin-top:2px">Cotação USD→BRL: R$ ' + r.cotacao.toFixed(4).replace('.', ',') + '</div></div>' +
+    '<div style="text-align:right"><div class="tval">' + fmtUSD2(totalUSD) + '</div>' +
+    '<div style="font-size:12px;margin-top:2px">' + fmtBRL(totalBRL) + '</div></div></div>' +
 
-  document.body.appendChild(container);
+    '<div class="sec"><div class="lbl">Condições Comerciais</div>' +
+    '<table class="ct"><tr><td>Incoterm</td><td>' + incoterm + '</td></tr>' +
+    '<tr><td>Condição de Pagamento</td><td>' + pagto + '</td></tr>' +
+    '<tr><td>Prazo de Entrega</td><td>' + prazo + '</td></tr>' +
+    '<tr><td>Validade da Cotação</td><td><strong>' + validadeFmt + '</strong></td></tr>' +
+    '<tr><td>Tributação</td><td style="font-size:11px">' + tributacaoTxt +
+    (tributacaoDetalhe ? '<br><span style="color:#64748b">' + tributacaoDetalhe + '</span>' : '') +
+    '</td></tr></table></div>' +
 
-  // Injeta o logo via DOM (não via string, para não travar o html2canvas)
-  if (logosBase64[empresaKey]) {
-    const slot = container.querySelector('#logo-slot');
-    if (slot) {
-      const img = document.createElement('img');
-      img.src = logosBase64[empresaKey];
-      img.style.cssText = 'height:60px;width:auto;background:#fff;padding:6px;border-radius:6px;';
-      slot.appendChild(img);
-    }
-  }
+    (obs ? '<div style="margin:0 20px 10px;background:#fef9e7;border-left:3px solid #D4A04A;padding:10px 12px;font-size:11px;color:#6B5418"><strong>Observações:</strong> ' + obs.replace(/\n/g,'<br>') + '</div>' : '') +
 
-  const alvo = container.querySelector('#cotacao-render');
+    '<div class="ftr"><div>' +
+    '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase">Atenciosamente,</div>' +
+    '<div style="font-size:13px;font-weight:700;margin-top:5px">' + vendedor.nome + '</div>' +
+    '<div style="font-size:10px;color:#64748b">Departamento Comercial · ' + cadastro.razaoSocial + '</div>' +
+    '<div style="font-size:10px;color:#64748b;margin-top:2px">📱 ' + vendedor.telefone + '</div></div>' +
+    '<div style="text-align:right;font-size:9px;color:#94a3b8">Emitida em ' + dataEmissao + '<br>' + numeroCot + ' · ' + cadastro.nomeFantasia + '<br>' +
+    '<span style="color:' + cadastro.corPrimaria + ';font-weight:700">Elaborado por Priscila</span></div></div>' +
 
-  // Aguarda 300ms para o browser renderizar o elemento
-  await new Promise(function(res) { setTimeout(res, 300); });
+    '</body></html>';
 
-  try {
-    const canvas = await html2canvas(alvo, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: false,
-      backgroundColor: '#ffffff',
-      logging: false,
-      width: 794,
-      windowWidth: 794
-    });
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:210mm;height:297mm;border:none;';
+  document.body.appendChild(iframe);
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(html);
+  iframe.contentDocument.close();
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.92);
-    const jsPDF = window.jspdf.jsPDF;
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
-    const imgH = (canvas.height * pageW) / canvas.width;
+  await new Promise(function(res) { setTimeout(res, 800); });
+  iframe.contentWindow.focus();
+  iframe.contentWindow.print();
+  setTimeout(function() { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 3000);
 
-    if (imgH <= pageH) {
-      pdf.addImage(imgData, 'JPEG', 0, 0, pageW, imgH);
-    } else {
-      let restante = imgH, posY = 0;
-      while (restante > 0) {
-        pdf.addImage(imgData, 'JPEG', 0, posY, pageW, imgH);
-        restante -= pageH; posY -= pageH;
-        if (restante > 0) pdf.addPage();
-      }
-    }
-
-    const nomeArquivo = numeroCot + '_' + cadastro.nomeFantasia.replace(/\s+/g,'_') + '_' + cliRazao.replace(/[^a-zA-Z0-9]/g,'_').slice(0,25) + '.pdf';
-    pdf.save(nomeArquivo);
-    document.body.removeChild(container);
-    mostrarToast('✅ PDF gerado: ' + numeroCot);
-
-  } catch (err) {
-    document.body.removeChild(container);
-    console.error('Erro ao gerar PDF:', err);
-    alert('Erro ao gerar PDF: ' + err.message + '\n\nRecarregue a página (F5) e tente novamente.');
-  }
+  mostrarToast('✅ ' + numeroCot + ' — salve como PDF na janela que abriu');
 }
 
-// ============================================================
-// COMPARTILHAMENTO VIA WHATSAPP
-// ============================================================
-
+// ===== WHATSAPP =====
 async function compartilharWhatsApp() {
+  const vendedor = obterVendedorSelecionado();
+  if (!vendedor) { mostrarToast('⚠️ Selecione um vendedor'); return; }
   const r = calcular();
   const p = r.p;
   const empresaKey = document.getElementById('sel-empresa').value;
   const cadastro = EMPRESAS_CADASTRO[empresaKey];
-  const vendedor = obterVendedorSelecionado();
-
-  if (!vendedor) { mostrarToast('⚠️ Selecione um vendedor antes de compartilhar'); return; }
-
   const cliRazao = (document.getElementById('cli-razao').value || '').trim() || '[Cliente]';
-  const cliContato = (document.getElementById('cli-contato').value || '').trim() || '';
+  const cliContato = (document.getElementById('cli-contato').value || '').trim();
   const cliTelefone = (document.getElementById('cli-telefone').value || '').trim();
   const cliCnpj = (document.getElementById('cli-cnpj').value || '').trim() || '—';
   const ncm = document.getElementById('sel-ncm').value;
@@ -1794,71 +1057,39 @@ async function compartilharWhatsApp() {
   const totalUSD = r.precoBrutoUSD * qtd;
   const totalBRL = r.precoBrutoBRL * qtd;
 
-  // ── Obter número único (compartilhado com PDF) ──
   const numeroCot = await obterNumeroCotacao({
-    vendedor:    vendedor.nome,
-    empresa:     cadastro.razaoSocial,
-    cliente:     cliRazao,
-    cnpjCliente: cliCnpj,
-    produto:     p.familia.label + ' (' + ncm + ')',
-    quantidade:  qtd + ' ' + unidade,
-    valorUSD:    totalUSD.toFixed(2),
-    valorBRL:    totalBRL.toFixed(2)
+    vendedor: vendedor.nome, empresa: cadastro.razaoSocial, cliente: cliRazao, cnpjCliente: cliCnpj,
+    produto: p.familia.label + ' (' + ncm + ')', quantidade: qtd + ' ' + unidade,
+    valorUSD: totalUSD.toFixed(2), valorBRL: totalBRL.toFixed(2)
   });
 
   const telLimpo = cliTelefone.replace(/\D/g, '');
-  const saudacao = cliContato ? `Olá, ${cliContato}!` : `Olá!`;
-  const msg =
-`${saudacao} 👋
-
-Segue nossa proposta comercial *${numeroCot}* da *${cadastro.razaoSocial}*:
-
-📦 *Produto:* ${p.familia.label}
-🏷️ *NCM:* ${ncm}
-📊 *Quantidade:* ${qtd.toLocaleString('pt-BR')} ${unidade}
-💰 *Valor unitário:* ${fmtUSD(r.precoBrutoUSD)}/${unidade}
-💵 *Total:* ${fmtUSD2(totalUSD)}
-
-📋 *Condições:*
-• Incoterm: ${incoterm}
-• Pagamento: ${pagto}
-• Prazo de entrega: ${prazo}
-• Validade da proposta: ${validadeFmt}
-
-A cotação detalhada em PDF segue em anexo no próximo envio.
-
-Qualquer dúvida, estou à disposição.
-
-Atenciosamente,
-${vendedor.nome}
-📱 ${vendedor.telefone}
-${cadastro.razaoSocial}`;
+  const saudacao = cliContato ? 'Olá, ' + cliContato + '!' : 'Olá!';
+  const msg = saudacao + ' 👋\n\nSegue nossa proposta comercial *' + numeroCot + '* da *' + cadastro.razaoSocial + '*:\n\n' +
+    '📦 *Produto:* ' + p.familia.label + '\n🏷️ *NCM:* ' + ncm + '\n📊 *Quantidade:* ' + qtd.toLocaleString('pt-BR') + ' ' + unidade + '\n' +
+    '💰 *Valor unitário:* ' + fmtUSD(r.precoBrutoUSD) + '/' + unidade + '\n💵 *Total:* ' + fmtUSD2(totalUSD) + '\n\n' +
+    '📋 *Condições:*\n• Incoterm: ' + incoterm + '\n• Pagamento: ' + pagto + '\n• Prazo: ' + prazo + '\n• Validade: ' + validadeFmt + '\n\n' +
+    'A cotação detalhada em PDF segue em anexo.\n\nAtenciosamente,\n' + vendedor.nome + '\n📱 ' + vendedor.telefone + '\n' + cadastro.razaoSocial;
 
   const msgUrl = encodeURIComponent(msg);
-  let whatsappUrl;
+  let url;
   if (telLimpo && telLimpo.length >= 10) {
-    const telComDDI = telLimpo.startsWith('55') ? telLimpo : '55' + telLimpo;
-    whatsappUrl = `https://wa.me/${telComDDI}?text=${msgUrl}`;
+    const telDDI = telLimpo.startsWith('55') ? telLimpo : '55' + telLimpo;
+    url = 'https://wa.me/' + telDDI + '?text=' + msgUrl;
   } else {
-    whatsappUrl = `https://wa.me/?text=${msgUrl}`;
+    url = 'https://wa.me/?text=' + msgUrl;
   }
-  window.open(whatsappUrl, '_blank');
+  window.open(url, '_blank');
   mostrarToast('📱 WhatsApp aberto · ' + numeroCot);
 }
 
-// ============================================================
-// BUSCA AUTOMÁTICA DE PTAX
-// ============================================================
-
-function formatarDataBR(dataStr) {
-  if (typeof dataStr === 'string' && dataStr.length >= 10) {
-    const partes = dataStr.substring(0, 10).split('-');
-    if (partes.length === 3) return partes[2] + '/' + partes[1] + '/' + partes[0];
+// ===== PTAX =====
+function formatarDataBR(s) {
+  if (typeof s === 'string' && s.length >= 10) {
+    const p = s.substring(0, 10).split('-');
+    if (p.length === 3) return p[2] + '/' + p[1] + '/' + p[0];
   }
-  if (dataStr instanceof Date) {
-    return String(dataStr.getDate()).padStart(2,'0') + '/' + String(dataStr.getMonth()+1).padStart(2,'0') + '/' + dataStr.getFullYear();
-  }
-  return String(dataStr);
+  return String(s);
 }
 
 async function buscarPtaxAwesome() {
@@ -1867,98 +1098,70 @@ async function buscarPtaxAwesome() {
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const dados = await resp.json();
     const cot = dados.USDBRL;
-    if (!cot) throw new Error('Sem dados USD-BRL');
     const valor = parseFloat(cot.ask);
     if (isNaN(valor) || valor <= 0) throw new Error('Valor inválido');
-    return { valor, dataFormatada: formatarDataBR((cot.create_date || '').substring(0, 10)), fonte: 'AwesomeAPI (espelho BCB)' };
-  } catch (err) { console.warn('Falha AwesomeAPI:', err.message); return null; }
-}
-
-async function buscarPtaxBCB() {
-  try {
-    const hoje = new Date();
-    const dias = new Date(); dias.setDate(hoje.getDate() - 10);
-    const fmt = function (d) { return String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'-'+d.getFullYear(); };
-    const url = "https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarPeriodo(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@dataInicial='" + fmt(dias) + "'&@dataFinalCotacao='" + fmt(hoje) + "'&$format=json";
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const dados = await resp.json();
-    if (!dados.value || dados.value.length === 0) throw new Error('Sem cotações');
-    const fechamentos = dados.value.filter(function (c) { return c.tipoBoletim === 'Fechamento'; });
-    const ultima = fechamentos.length > 0 ? fechamentos[fechamentos.length-1] : dados.value[dados.value.length-1];
-    return { valor: ultima.cotacaoVenda, dataFormatada: formatarDataBR(ultima.dataHoraCotacao), fonte: 'BCB Olinda (oficial)' };
-  } catch (err) { console.warn('Falha BCB:', err.message); return null; }
+    return { valor, dataFormatada: formatarDataBR((cot.create_date || '').substring(0, 10)), fonte: 'AwesomeAPI' };
+  } catch(err) { console.warn('Falha AwesomeAPI:', err.message); return null; }
 }
 
 async function buscarPtax() {
   const btn = document.getElementById('btn-buscar-ptax');
   const msg = document.getElementById('ptax-status-msg');
-  const inputCotacao = document.getElementById('cotacao');
+  const inputCot = document.getElementById('cotacao');
   btn.disabled = true; btn.textContent = '⏳ Buscando...';
   msg.style.color = '#92400e'; msg.textContent = 'Consultando PTAX...';
-  let resultado = await buscarPtaxAwesome();
-  if (!resultado) { msg.textContent = 'AwesomeAPI falhou — tentando BCB...'; resultado = await buscarPtaxBCB(); }
+  const resultado = await buscarPtaxAwesome();
   btn.disabled = false; btn.textContent = '🔄 Atualizar PTAX';
   if (resultado) {
-    inputCotacao.value = resultado.valor.toFixed(4);
+    inputCot.value = resultado.valor.toFixed(4);
     msg.style.color = '#047857';
-    msg.innerHTML = '✅ PTAX <strong>R$ ' + resultado.valor.toFixed(4).replace('.', ',') + '</strong> de <strong>' + resultado.dataFormatada + '</strong> — fonte: ' + resultado.fonte;
+    msg.innerHTML = '✅ PTAX <strong>R$ ' + resultado.valor.toFixed(4).replace('.', ',') + '</strong> — ' + resultado.dataFormatada;
     render();
   } else {
     msg.style.color = '#b91c1c';
-    msg.textContent = '⚠️ Não foi possível buscar PTAX automaticamente. Preencha manualmente.';
+    msg.textContent = '⚠️ Não foi possível buscar PTAX. Preencha manualmente.';
   }
 }
 
-// ============================================================
-// BUSCA INTELIGENTE DE PRODUTOS
-// ============================================================
-
+// ===== BUSCA DE PRODUTOS =====
 let produtoSelecionadoAtual = null;
 
-function normalizar(texto) {
-  return (texto || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
-}
+function normalizar(t) { return (t || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim(); }
 
 function buscarProdutos(termo) {
   const t = normalizar(termo);
   if (t.length < 2) return [];
-  const termos = t.split(' ').filter(function (x) { return x.length > 0; });
-  const resultados = PRODUTOS.map(function (p) {
+  const termos = t.split(' ').filter(function(x) { return x.length > 0; });
+  const resultados = PRODUTOS.map(function(p) {
     const buscavel = normalizar(p.codigo + ' ' + p.descricao + ' ' + p.ncm);
     let score = 0;
     if (normalizar(p.codigo) === t) score += 1000;
     if (normalizar(p.codigo).startsWith(t)) score += 500;
-    termos.forEach(function (termo) {
-      if (buscavel.indexOf(termo) >= 0) score += 100;
-      if (normalizar(p.descricao).startsWith(termo)) score += 50;
-    });
+    termos.forEach(function(termo) { if (buscavel.indexOf(termo) >= 0) score += 100; });
     return { produto: p, score };
-  }).filter(function (r) { return r.score > 0; });
-  resultados.sort(function (a, b) { return b.score - a.score; });
-  return resultados.slice(0, 10).map(function (r) { return r.produto; });
+  }).filter(function(r) { return r.score > 0; });
+  resultados.sort(function(a, b) { return b.score - a.score; });
+  return resultados.slice(0, 10).map(function(r) { return r.produto; });
 }
 
 function renderizarResultadosBusca(produtos) {
   const div = document.getElementById('busca-resultados');
   if (produtos.length === 0) {
-    div.innerHTML = '<div style="padding:14px;color:#94a3b8;font-size:12px;text-align:center;font-style:italic;">Nenhum produto encontrado.</div>';
+    div.innerHTML = '<div style="padding:14px;color:#94a3b8;font-size:12px;text-align:center;">Nenhum produto encontrado.</div>';
     div.style.display = 'block'; return;
   }
-  div.innerHTML = produtos.map(function (p) {
-    const familia = FAMILIAS[p.familia];
-    const familiaLabel = familia ? familia.label : p.familia;
-    return '<div class="resultado-busca" data-codigo="' + p.codigo + '" style="padding:9px 12px;border-bottom:1px solid #e2e8f0;cursor:pointer;transition:background 0.1s;">' +
-      '<div style="font-size:12px;font-weight:600;color:#1a2332;">' + p.codigo + ' — ' + p.descricao + '</div>' +
-      '<div style="font-size:10.5px;color:#64748b;margin-top:2px;"><span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:3px;font-weight:600;">' + familiaLabel + '</span> · NCM ' + p.ncm + ' · ' + p.unidade + '</div>' +
-    '</div>';
+  div.innerHTML = produtos.map(function(p) {
+    const fam = FAMILIAS[p.familia];
+    return '<div class="resultado-busca" data-codigo="' + p.codigo + '" style="padding:9px 12px;border-bottom:1px solid #e2e8f0;cursor:pointer;">' +
+      '<div style="font-size:12px;font-weight:600;">' + p.codigo + ' — ' + p.descricao + '</div>' +
+      '<div style="font-size:10.5px;color:#64748b;margin-top:2px;">' + (fam ? fam.label : p.familia) + ' · NCM ' + p.ncm + '</div></div>';
   }).join('');
-  div.querySelectorAll('.resultado-busca').forEach(function (el) {
-    el.addEventListener('mouseenter', function () { el.style.background = '#f0f9ff'; });
-    el.addEventListener('mouseleave', function () { el.style.background = '#fff'; });
-    el.addEventListener('click', function () {
-      const produto = PRODUTOS.find(function (p) { return p.codigo === el.dataset.codigo; });
-      if (produto) aplicarProdutoSelecionado(produto);
+  div.querySelectorAll('.resultado-busca').forEach(function(el) {
+    el.addEventListener('mouseenter', function() { el.style.background = '#f0f9ff'; });
+    el.addEventListener('mouseleave', function() { el.style.background = '#fff'; });
+    el.addEventListener('click', function() {
+      const p = PRODUTOS.find(function(x) { return x.codigo === el.dataset.codigo; });
+      if (p) aplicarProdutoSelecionado(p);
     });
   });
   div.style.display = 'block';
@@ -1966,23 +1169,22 @@ function renderizarResultadosBusca(produtos) {
 
 function aplicarProdutoSelecionado(produto) {
   produtoSelecionadoAtual = produto;
-  invalidarNumeroCotacao(); // novo produto = nova cotação
+  invalidarNumeroCotacao();
   document.getElementById('sel-familia').value = produto.familia;
   atualizarNCMs();
   const selNCM = document.getElementById('sel-ncm');
-  if (!Array.from(selNCM.options).some(function (o) { return o.value === produto.ncm; })) {
+  if (!Array.from(selNCM.options).some(function(o) { return o.value === produto.ncm; })) {
     const opt = document.createElement('option');
     opt.value = produto.ncm;
     opt.textContent = produto.ncm + ' — ' + produto.descricao.slice(0, 40);
     selNCM.appendChild(opt);
   }
   selNCM.value = produto.ncm;
-  const selUnidade = document.getElementById('sel-unidade');
-  selUnidade.value = produto.unidade === 'T' ? 'ton' : 'kg';
+  document.getElementById('sel-unidade').value = produto.unidade === 'T' ? 'ton' : 'kg';
   aplicarUnidade();
-  const familia = FAMILIAS[produto.familia];
+  const fam = FAMILIAS[produto.familia];
   document.getElementById('prod-sel-desc').textContent = produto.codigo + ' — ' + produto.descricao;
-  document.getElementById('prod-sel-meta').innerHTML = '<strong>' + (familia ? familia.label : produto.familia) + '</strong> · NCM ' + produto.ncm + ' · Unidade: ' + produto.unidade;
+  document.getElementById('prod-sel-meta').innerHTML = '<strong>' + (fam ? fam.label : produto.familia) + '</strong> · NCM ' + produto.ncm + ' · ' + produto.unidade;
   document.getElementById('produto-selecionado').style.display = 'block';
   document.getElementById('busca-produto').value = produto.codigo + ' — ' + produto.descricao;
   document.getElementById('busca-resultados').style.display = 'none';
@@ -1990,10 +1192,10 @@ function aplicarProdutoSelecionado(produto) {
 }
 
 function atualizarNCMs() {
-  const familiaKey = document.getElementById('sel-familia').value;
+  const fk = document.getElementById('sel-familia').value;
   const sel = document.getElementById('sel-ncm');
   sel.innerHTML = '';
-  FAMILIAS[familiaKey].ncms.forEach(function (ncm) {
+  FAMILIAS[fk].ncms.forEach(function(ncm) {
     const opt = document.createElement('option');
     opt.value = ncm.code;
     opt.textContent = ncm.code + ' — ' + ncm.desc;
@@ -2003,22 +1205,16 @@ function atualizarNCMs() {
 
 function aplicarModo(m) {
   modo = m;
-  document.querySelectorAll('[data-modo]').forEach(function (btn) {
-    btn.classList.toggle('active', btn.dataset.modo === m);
-  });
+  document.querySelectorAll('[data-modo]').forEach(function(btn) { btn.classList.toggle('active', btn.dataset.modo === m); });
   if (m === 'bruto-liq') {
     document.getElementById('lbl-preco').innerHTML = 'Preço de Venda <span class="hint">(bruto, em dólar)</span>';
     document.getElementById('lbl-principal-usd').innerHTML = '🎯 Net Back USD/' + unidade;
     document.getElementById('lbl-principal-brl').textContent = 'Net Back BRL/' + unidade;
-    document.getElementById('lbl-comp-1').textContent = 'Preço bruto USD/' + unidade;
-    document.getElementById('lbl-comp-final').textContent = '= Líquido BRL/' + unidade;
     document.getElementById('result-title').textContent = 'Net Back Unitário';
   } else {
     document.getElementById('lbl-preco').innerHTML = 'Preço Líquido Desejado <span class="hint">(quanto receber líquido)</span>';
     document.getElementById('lbl-principal-usd').innerHTML = '🎯 Preço Bruto USD/' + unidade;
     document.getElementById('lbl-principal-brl').textContent = 'Preço Bruto BRL/' + unidade;
-    document.getElementById('lbl-comp-1').textContent = 'Preço bruto USD/' + unidade + ' (calculado)';
-    document.getElementById('lbl-comp-final').textContent = '= Líquido BRL/' + unidade + ' (alvo)';
     document.getElementById('result-title').textContent = 'Preço Bruto Necessário (Gross-Up)';
   }
   render();
@@ -2036,23 +1232,18 @@ function copiarResumo() {
   const p = r.p;
   const ncm = document.getElementById('sel-ncm').value;
   const operacaoSel = document.getElementById('sel-operacao');
-  const operacao = operacaoSel.options[operacaoSel.selectedIndex].text;
-  const estado = document.getElementById('sel-estado').value;
-  const texto = '📊 CALCULADORA FISCAL MULTI-CNPJ — Citrus Juice\n' +
-    'Modo: ' + (modo === 'bruto-liq' ? 'BRUTO → LÍQUIDO' : 'LÍQUIDO → BRUTO (GROSS-UP)') + '\n\n' +
-    'EMPRESA: ' + p.empresa.nome + '\n' +
-    'PRODUTO: ' + p.familia.label + ' — NCM ' + ncm + '\n' +
-    'OPERAÇÃO: ' + operacao + (p.operacao === 'interno-out' ? ' (' + estado + ')' : '') + '\n\n' +
-    'ICMS: ' + p.icmsLabel + '\n' + 'PIS+COFINS: ' + p.pcLabel + '\n' + 'IPI: ' + p.ipiLabel + '\n\n' +
+  const texto = '📊 CALCULADORA FISCAL — Citrus Juice\n' +
+    'EMPRESA: ' + p.empresa.nome + '\nPRODUTO: ' + p.familia.label + ' — NCM ' + ncm + '\n' +
+    'OPERAÇÃO: ' + operacaoSel.options[operacaoSel.selectedIndex].text + '\n\n' +
+    'ICMS: ' + p.icmsLabel + '\nPIS+COFINS: ' + p.pcLabel + '\nIPI: ' + p.ipiLabel + '\n\n' +
     'RESULTADO: ' + fmtUSD(modo === 'bruto-liq' ? r.precoLiquidoUSD : r.precoBrutoUSD) + '/' + unidade + '\n' +
-    '          ' + fmtBRL(modo === 'bruto-liq' ? r.precoLiquidoBRL : r.precoBrutoBRL) + '/' + unidade + '\n\n' +
-    'Carga tributária: ' + fmtPct(r.cargaTrib) + '\nFator gross-up: ' + fmtFator(r.fator) + '\n\n' +
-    'Elaborado por Priscila — Citrus Juice LTDA';
+    'Carga: ' + fmtPct(r.cargaTrib) + '\n\nElaborado por Priscila';
   if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(texto).then(function () { mostrarToast('✅ Resumo copiado!'); });
+    navigator.clipboard.writeText(texto).then(function() { mostrarToast('✅ Resumo copiado!'); });
   } else {
     const ta = document.createElement('textarea');
-    ta.value = texto; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    ta.value = texto; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
     mostrarToast('✅ Resumo copiado!');
   }
 }
@@ -2062,147 +1253,24 @@ function mostrarToast(msg) {
   toast.textContent = msg;
   toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1B2E5E;color:#fff;padding:14px 24px;border-radius:8px;z-index:10000;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.2);';
   document.body.appendChild(toast);
-  setTimeout(function () { toast.remove(); }, 3000);
+  setTimeout(function() { toast.remove(); }, 3000);
 }
 
-function abrirModalAnexo9() {
-  const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;';
-  overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
-  const modal = document.createElement('div');
-  modal.style.cssText = 'background:#fff;border-radius:12px;max-width:760px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
-  modal.innerHTML =
-    '<div style="background:linear-gradient(135deg,#6d28d9 0%,#7c3aed 100%);color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">' +
-      '<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;opacity:0.85;font-weight:600;">LC 214/2025</div>' +
-      '<div style="font-size:17px;font-weight:700;margin-top:2px;">Anexo IX — Item 7</div>' +
-      '<div style="font-size:11px;opacity:0.85;margin-top:2px;">Insumos com redução de 60% das alíquotas de IBS e CBS</div></div>' +
-      '<button id="fechar-modal-anexo9" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;line-height:1;">×</button>' +
-    '</div>' +
-    '<div style="padding:22px 24px;overflow-y:auto;font-size:13px;line-height:1.6;color:#1f2937;">' +
-      '<div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:12px 14px;border-radius:4px;margin-bottom:18px;font-size:12px;color:#78350f;">' +
-        '<strong>📌 Resumo prático:</strong> Óleo essencial (NCM 33.01) incluído no Anexo IX item 7, mas a redução de 60% é <strong>condicional ao destino comprovado</strong> — só vale para fabricação de fertilizantes/biodefensivos.' +
-      '</div>' +
-      '<p style="margin-bottom:14px;text-align:justify;font-size:12.5px;">O item 7 do Anexo IX inclui <strong style="background:#fbbf24;padding:1px 4px;border-radius:3px;">óleos essenciais</strong> destinados à fabricação de biofertilizantes, fertilizantes, corretivos de solo, remineralizadores, substratos para plantas, bioestimulantes ou biodefensivos para controle fitossanitário, em conformidade com a legislação específica.</p>' +
-      '<div style="background:#fee2e2;border-left:4px solid #dc2626;padding:12px 14px;border-radius:4px;margin-top:18px;font-size:12px;color:#7f1d1d;">' +
-        '<strong>⚠️ Risco:</strong> se o cliente desviar o óleo para uso fora do escopo do Item 7, o benefício pode ser glosado pelo fisco com cobrança retroativa de tributos, multa e juros.' +
-      '</div>' +
-      '<div style="margin-top:18px;padding-top:14px;border-top:1px solid #e5e7eb;font-size:10.5px;color:#6b7280;text-align:center;"><strong>Fonte:</strong> LC 214/2025 · Art. 138 + Anexo IX (Item 7)</div>' +
-    '</div>';
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
-  modal.querySelector('#fechar-modal-anexo9').addEventListener('click', function () { overlay.remove(); });
-}
-
-// ============================================================
-// SISTEMA DE LOGIN
-// ============================================================
-
-let usuarioLogado = null;
-
-async function fazerLogin() {
-  const usuario = (document.getElementById('login-usuario').value || '').trim();
-  const senha   = (document.getElementById('login-senha').value   || '').trim();
-  const lembrar = document.getElementById('login-lembrar').checked;
-  const erroEl  = document.getElementById('login-erro');
-  const btnEl   = document.getElementById('btn-entrar');
-
-  if (!usuario || !senha) {
-    erroEl.textContent = 'Preencha o usuário e a senha.';
-    erroEl.style.display = 'block'; return;
-  }
-
-  btnEl.textContent = '⏳ Verificando...'; btnEl.disabled = true;
-  erroEl.style.display = 'none';
-
-  try {
-    const params = new URLSearchParams({ acao: 'login', usuario, senha });
-    const resp = await fetch(SHEETS_API_URL + '?' + params.toString(), { method: 'GET', redirect: 'follow' });
-    const data = await resp.json();
-
-    if (data.sucesso) {
-      usuarioLogado = data;
-
-      if (lembrar) {
-        localStorage.setItem('calc-usuario', usuario);
-        localStorage.setItem('calc-senha',   senha);
-        localStorage.setItem('calc-lembrar', '1');
-      } else {
-        localStorage.removeItem('calc-usuario');
-        localStorage.removeItem('calc-senha');
-        localStorage.removeItem('calc-lembrar');
-      }
-
-      document.getElementById('login-overlay').style.display = 'none';
-      renderizarBarraUsuario(data);
-
-    } else {
-      erroEl.textContent = data.erro || 'Usuário ou senha incorretos.';
-      erroEl.style.display = 'block';
-    }
-  } catch (err) {
-    erroEl.textContent = 'Erro de conexão. Tente novamente em instantes.';
-    erroEl.style.display = 'block';
-    console.error('Erro no login:', err);
-  }
-
-  btnEl.textContent = 'Entrar'; btnEl.disabled = false;
-}
-
-function renderizarBarraUsuario(data) {
-  const headerEl = document.querySelector('.header');
-  const bar = document.createElement('div');
-  bar.className = 'user-bar';
-  bar.innerHTML =
-    '👤 <strong>' + data.nome + '</strong>' +
-    (data.perfil === 'admin'
-      ? '<span class="user-badge">ADMIN</span>'
-      : '') +
-    '<button class="logout-btn" onclick="fazerLogout()">Sair</button>';
-  headerEl.appendChild(bar);
-
-  // Garante PTAX atualizado após o login — se ainda estiver no valor padrão, busca de novo
-  const cotacaoAtual = parseFloat(document.getElementById('cotacao').value) || 0;
-  if (Math.abs(cotacaoAtual - 5.20) < 0.01) buscarPtax();
-}
-
-function fazerLogout() {
-  localStorage.removeItem('calc-usuario');
-  localStorage.removeItem('calc-senha');
-  localStorage.removeItem('calc-lembrar');
-  window.location.reload();
-}
-
-async function tentarLoginAutomatico() {
-  if (localStorage.getItem('calc-lembrar') !== '1') return;
-  const usuario = localStorage.getItem('calc-usuario');
-  const senha   = localStorage.getItem('calc-senha');
-  if (!usuario || !senha) return;
-  document.getElementById('login-usuario').value   = usuario;
-  document.getElementById('login-senha').value     = senha;
-  document.getElementById('login-lembrar').checked = true;
-  await fazerLogin();
-}
-
-// ============================================================
-// INICIALIZAÇÃO
-// ============================================================
-
+// ===== INIT =====
 function init() {
-  document.querySelectorAll('[data-modo]').forEach(function (btn) {
-    btn.addEventListener('click', function () { aplicarModo(btn.dataset.modo); });
+  document.querySelectorAll('[data-modo]').forEach(function(btn) {
+    btn.addEventListener('click', function() { aplicarModo(btn.dataset.modo); });
   });
-
-  document.getElementById('sel-empresa').addEventListener('change', function () {
+  document.getElementById('sel-empresa').addEventListener('change', function() {
     popularVendedores(); invalidarNumeroCotacao(); render();
   });
   document.getElementById('sel-operacao').addEventListener('change', render);
   document.getElementById('sel-estado').addEventListener('change', render);
   document.getElementById('sel-destino').addEventListener('change', render);
-  document.getElementById('sel-familia').addEventListener('change', function () { atualizarNCMs(); render(); });
+  document.getElementById('sel-familia').addEventListener('change', function() { atualizarNCMs(); render(); });
   document.getElementById('sel-ncm').addEventListener('change', render);
   document.getElementById('sel-vendedor').addEventListener('change', salvarVendedorPadrao);
 
-  // Invalida o número de cotação quando dados que identificam a operação mudam
   ['cli-razao', 'cli-cnpj', 'precoUSD', 'quantidade'].forEach(function(id) {
     const el = document.getElementById(id);
     if (el) {
@@ -2211,23 +1279,18 @@ function init() {
     }
   });
 
-  // Busca de produto
   const inputBusca = document.getElementById('busca-produto');
-  const divResultados = document.getElementById('busca-resultados');
-
-  inputBusca.addEventListener('input', function () {
+  const divRes = document.getElementById('busca-resultados');
+  inputBusca.addEventListener('input', function() {
     invalidarNumeroCotacao();
-    const termo = inputBusca.value;
-    if (termo.length < 2) { divResultados.style.display = 'none'; return; }
-    renderizarResultadosBusca(buscarProdutos(termo));
+    if (inputBusca.value.length < 2) { divRes.style.display = 'none'; return; }
+    renderizarResultadosBusca(buscarProdutos(inputBusca.value));
   });
-
-  inputBusca.addEventListener('focus', function () {
+  inputBusca.addEventListener('focus', function() {
     if (inputBusca.value.length >= 2) renderizarResultadosBusca(buscarProdutos(inputBusca.value));
   });
-
-  document.addEventListener('click', function (e) {
-    if (!inputBusca.contains(e.target) && !divResultados.contains(e.target)) divResultados.style.display = 'none';
+  document.addEventListener('click', function(e) {
+    if (!inputBusca.contains(e.target) && !divRes.contains(e.target)) divRes.style.display = 'none';
   });
 
   document.getElementById('btn-buscar-ptax').addEventListener('click', buscarPtax);
@@ -2237,39 +1300,15 @@ function init() {
   document.getElementById('quantidade').addEventListener('input', render);
   document.getElementById('cbs-ibs-total').addEventListener('input', render);
   document.getElementById('btn-copiar').addEventListener('click', copiarResumo);
-  document.getElementById('btn-info-anexo9').addEventListener('click', abrirModalAnexo9);
   document.getElementById('btn-pdf').addEventListener('click', gerarCotacaoPDF);
   document.getElementById('btn-whatsapp').addEventListener('click', compartilharWhatsApp);
 
-  // Botão de diagnóstico — só testa se a API responde, SEM gerar número real
-  const btnTestar = document.getElementById('btn-testar-api');
-  if (btnTestar) {
-    btnTestar.addEventListener('click', async function () {
-      const statusEl = document.getElementById('api-status');
-      statusEl.style.color = '#92400e';
-      statusEl.textContent = '⏳ Testando conexão...';
-      try {
-        const resp = await fetch(SHEETS_API_URL + '?acao=ping', { method: 'GET', redirect: 'follow' });
-        if (resp.ok) {
-          statusEl.style.color = '#047857';
-          statusEl.textContent = '✅ API acessível! Clique em PDF ou WhatsApp para gerar número real.';
-        } else {
-          throw new Error('HTTP ' + resp.status);
-        }
-      } catch (err) {
-        statusEl.style.color = '#b91c1c';
-        statusEl.textContent = '❌ ' + err.message;
-      }
-    });
-  }
-
-  // Listeners do login
+  // Login
   document.getElementById('btn-entrar').addEventListener('click', fazerLogin);
   document.getElementById('login-senha').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') fazerLogin();
   });
 
-  // Validade default: 7 dias
   const hoje = new Date();
   hoje.setDate(hoje.getDate() + 7);
   document.getElementById('cot-validade').value = hoje.toISOString().split('T')[0];
@@ -2278,13 +1317,8 @@ function init() {
   atualizarNCMs();
   aplicarModo('bruto-liq');
 
-  // Pré-carrega logos em base64 para o PDF
   precarregarLogos();
-
-  // Login automático (roda em paralelo com o PTAX)
   tentarLoginAutomatico();
-
-  // PTAX: busca imediatamente ao carregar a página
   buscarPtax();
 }
 
