@@ -518,7 +518,7 @@
 
       <div class="input-group">
         <label>Usuário</label>
-        <input type="text" id="login-usuario" placeholder="admin ou taize@citrusjuice.com.br" autocomplete="username">
+        <input type="text" id="login-usuario" placeholder="Digite seu usuário" autocomplete="username">
       </div>
 
       <div class="input-group">
@@ -1629,7 +1629,7 @@ async function gerarCotacaoPDF() {
     <div id="cotacao-render" style="width:794px;background:#fff;font-family:'Helvetica',Arial,sans-serif;color:#1a2332;padding:0;">
       <div style="background:linear-gradient(135deg,${cadastro.corPrimaria} 0%,${cadastro.corSecundaria} 100%);color:#fff;padding:24px 36px;display:flex;justify-content:space-between;align-items:center;">
         <div style="display:flex;align-items:center;gap:16px;">
-          <img src="${cadastro.logo}" alt="${cadastro.nomeFantasia}" style="height:60px;width:auto;background:#fff;padding:6px;border-radius:6px;" onerror="this.style.display='none'">
+          ${logosBase64[empresaKey] ? `<img src="${logosBase64[empresaKey]}" alt="${cadastro.nomeFantasia}" style="height:60px;width:auto;background:#fff;padding:6px;border-radius:6px;">` : ''}
           <div>
             <div style="font-size:22px;font-weight:700;letter-spacing:-0.3px;">${cadastro.razaoSocial}</div>
             <div style="font-size:11px;opacity:0.9;margin-top:2px;">CNPJ ${cadastro.cnpj} · IE ${cadastro.ie}</div>
@@ -2269,6 +2269,9 @@ function init() {
   popularVendedores();
   atualizarNCMs();
   aplicarModo('bruto-liq');
+
+  // Pré-carrega logos em base64 para o PDF
+  precarregarLogos();
 
   // Tenta login automático se o usuário salvou as credenciais antes
   tentarLoginAutomatico();
