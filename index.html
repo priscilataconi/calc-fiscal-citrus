@@ -458,9 +458,90 @@
     .body { grid-template-columns: 1fr; }
     .inputs-section { border-right: none; border-bottom: 1px solid #e2e8f0; }
   }
+
+  /* ====== LOGIN ====== */
+  .login-overlay {
+    position: fixed; inset: 0;
+    background: linear-gradient(135deg, #1B2E5E 0%, #0d1b3e 100%);
+    z-index: 99999;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .login-box {
+    background: #fff; border-radius: 16px; padding: 40px 36px;
+    width: 100%; max-width: 400px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+  }
+  .login-logo { text-align: center; margin-bottom: 28px; }
+  .login-logo img { height: 72px; width: auto; }
+  .login-logo .login-title { font-size: 20px; font-weight: 700; color: #1B2E5E; margin-top: 10px; }
+  .login-logo .login-sub { font-size: 12px; color: #64748b; margin-top: 3px; }
+  .login-btn {
+    width: 100%; padding: 13px;
+    background: linear-gradient(135deg, #1B2E5E 0%, #3A5A8C 100%);
+    color: #fff; border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    margin-top: 4px; transition: opacity 0.2s;
+    border-bottom: 3px solid #D4A04A;
+  }
+  .login-btn:hover { opacity: 0.9; }
+  .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .login-erro {
+    display: none; margin-top: 12px; padding: 10px 12px;
+    background: #fee2e2; border-left: 3px solid #dc2626;
+    border-radius: 4px; font-size: 12px; color: #7f1d1d; line-height: 1.4;
+  }
+  .login-lembrar { display: flex; align-items: center; gap: 8px; margin: 12px 0 16px; }
+  .login-lembrar input { width: auto; margin: 0; cursor: pointer; }
+  .login-lembrar label { font-size: 12px; color: #475569; cursor: pointer; margin: 0; font-weight: 400; }
+  .user-bar { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 11px; opacity: 0.9; flex-wrap: wrap; }
+  .user-badge { background: #D4A04A; color: #fff; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .logout-btn {
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+    color: #fff; padding: 3px 10px; border-radius: 4px;
+    font-size: 10px; cursor: pointer;
+  }
+  .logout-btn:hover { background: rgba(255,255,255,0.25); }
+  /* ====== FIM LOGIN ====== */
 </style>
 </head>
 <body>
+
+  <!-- ====== TELA DE LOGIN ====== -->
+  <div class="login-overlay" id="login-overlay">
+    <div class="login-box">
+      <div class="login-logo">
+        <img src="./logos/citrus-juice.png" alt="Citrus Juice" onerror="this.style.display='none'">
+        <div class="login-title">Calculadora Fiscal</div>
+        <div class="login-sub">Multi-CNPJ · Citrus Juice</div>
+      </div>
+
+      <div class="input-group">
+        <label>Usuário</label>
+        <input type="text" id="login-usuario" placeholder="admin ou taize@citrusjuice.com.br" autocomplete="username">
+      </div>
+
+      <div class="input-group">
+        <label>Senha</label>
+        <input type="password" id="login-senha" placeholder="••••••••" autocomplete="current-password">
+      </div>
+
+      <div class="login-lembrar">
+        <input type="checkbox" id="login-lembrar">
+        <label for="login-lembrar">Lembrar meu acesso neste dispositivo</label>
+      </div>
+
+      <button class="login-btn" id="btn-entrar">Entrar</button>
+
+      <div class="login-erro" id="login-erro"></div>
+
+      <div style="margin-top:24px;text-align:center;font-size:10px;color:#94a3b8;">
+        Elaborado por <strong style="color:#1B2E5E;">Priscila</strong> · Citrus Juice LTDA
+      </div>
+    </div>
+  </div>
+  <!-- ====== FIM LOGIN ====== -->
+
   <div class="container">
     <div class="header">
       <h1>Calculadora Fiscal Multi-CNPJ — Citrus Juice</h1>
@@ -2009,6 +2090,92 @@ function abrirModalAnexo9() {
 }
 
 // ============================================================
+// SISTEMA DE LOGIN
+// ============================================================
+
+let usuarioLogado = null;
+
+async function fazerLogin() {
+  const usuario = (document.getElementById('login-usuario').value || '').trim();
+  const senha   = (document.getElementById('login-senha').value   || '').trim();
+  const lembrar = document.getElementById('login-lembrar').checked;
+  const erroEl  = document.getElementById('login-erro');
+  const btnEl   = document.getElementById('btn-entrar');
+
+  if (!usuario || !senha) {
+    erroEl.textContent = 'Preencha o usuário e a senha.';
+    erroEl.style.display = 'block'; return;
+  }
+
+  btnEl.textContent = '⏳ Verificando...'; btnEl.disabled = true;
+  erroEl.style.display = 'none';
+
+  try {
+    const params = new URLSearchParams({ acao: 'login', usuario, senha });
+    const resp = await fetch(SHEETS_API_URL + '?' + params.toString(), { method: 'GET', redirect: 'follow' });
+    const data = await resp.json();
+
+    if (data.sucesso) {
+      usuarioLogado = data;
+
+      if (lembrar) {
+        localStorage.setItem('calc-usuario', usuario);
+        localStorage.setItem('calc-senha',   senha);
+        localStorage.setItem('calc-lembrar', '1');
+      } else {
+        localStorage.removeItem('calc-usuario');
+        localStorage.removeItem('calc-senha');
+        localStorage.removeItem('calc-lembrar');
+      }
+
+      document.getElementById('login-overlay').style.display = 'none';
+      renderizarBarraUsuario(data);
+
+    } else {
+      erroEl.textContent = data.erro || 'Usuário ou senha incorretos.';
+      erroEl.style.display = 'block';
+    }
+  } catch (err) {
+    erroEl.textContent = 'Erro de conexão. Tente novamente em instantes.';
+    erroEl.style.display = 'block';
+    console.error('Erro no login:', err);
+  }
+
+  btnEl.textContent = 'Entrar'; btnEl.disabled = false;
+}
+
+function renderizarBarraUsuario(data) {
+  const headerEl = document.querySelector('.header');
+  const bar = document.createElement('div');
+  bar.className = 'user-bar';
+  bar.innerHTML =
+    '👤 <strong>' + data.nome + '</strong>' +
+    (data.perfil === 'admin'
+      ? '<span class="user-badge">ADMIN</span>'
+      : '') +
+    '<button class="logout-btn" onclick="fazerLogout()">Sair</button>';
+  headerEl.appendChild(bar);
+}
+
+function fazerLogout() {
+  localStorage.removeItem('calc-usuario');
+  localStorage.removeItem('calc-senha');
+  localStorage.removeItem('calc-lembrar');
+  window.location.reload();
+}
+
+async function tentarLoginAutomatico() {
+  if (localStorage.getItem('calc-lembrar') !== '1') return;
+  const usuario = localStorage.getItem('calc-usuario');
+  const senha   = localStorage.getItem('calc-senha');
+  if (!usuario || !senha) return;
+  document.getElementById('login-usuario').value   = usuario;
+  document.getElementById('login-senha').value     = senha;
+  document.getElementById('login-lembrar').checked = true;
+  await fazerLogin();
+}
+
+// ============================================================
 // INICIALIZAÇÃO
 // ============================================================
 
@@ -2088,6 +2255,12 @@ function init() {
     });
   }
 
+  // Listeners do login
+  document.getElementById('btn-entrar').addEventListener('click', fazerLogin);
+  document.getElementById('login-senha').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') fazerLogin();
+  });
+
   // Validade default: 7 dias
   const hoje = new Date();
   hoje.setDate(hoje.getDate() + 7);
@@ -2096,6 +2269,9 @@ function init() {
   popularVendedores();
   atualizarNCMs();
   aplicarModo('bruto-liq');
+
+  // Tenta login automático se o usuário salvou as credenciais antes
+  tentarLoginAutomatico();
 
   // PTAX automático ao carregar
   buscarPtax();
