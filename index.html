@@ -1624,12 +1624,17 @@ async function gerarCotacaoPDF() {
     valorBRL:    totalBRL.toFixed(2)
   });
 
+  // ── Monta HTML do logo (base64 já carregado) ──
+  const logoHTML = logosBase64[empresaKey]
+    ? '<img src="' + logosBase64[empresaKey] + '" alt="' + cadastro.nomeFantasia + '" style="height:60px;width:auto;background:#fff;padding:6px;border-radius:6px;">'
+    : '';
+
   // ── Monta HTML da cotação ──
   const cotacaoHTML = `
     <div id="cotacao-render" style="width:794px;background:#fff;font-family:'Helvetica',Arial,sans-serif;color:#1a2332;padding:0;">
       <div style="background:linear-gradient(135deg,${cadastro.corPrimaria} 0%,${cadastro.corSecundaria} 100%);color:#fff;padding:24px 36px;display:flex;justify-content:space-between;align-items:center;">
         <div style="display:flex;align-items:center;gap:16px;">
-          ${logosBase64[empresaKey] ? `<img src="${logosBase64[empresaKey]}" alt="${cadastro.nomeFantasia}" style="height:60px;width:auto;background:#fff;padding:6px;border-radius:6px;">` : ''}
+          ${logoHTML}
           <div>
             <div style="font-size:22px;font-weight:700;letter-spacing:-0.3px;">${cadastro.razaoSocial}</div>
             <div style="font-size:11px;opacity:0.9;margin-top:2px;">CNPJ ${cadastro.cnpj} · IE ${cadastro.ie}</div>
